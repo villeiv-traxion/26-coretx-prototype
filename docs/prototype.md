@@ -22,9 +22,10 @@
   - Menú de hamburguesa que despliega un panel con todos los servicios y apps disponibles: debe abrir un panel a la izquierda con todas las apps y servicios disponibles, los CoreTX son las apps principales y esos abren submenus al hover o tap que muestran sus apps adicionales
 
 - Construir el prototipo
-  - Crear proyecto en repo de traxion
-  - Crear repo mirror en villeiv
-  - Configurar push a ambos remotos 
+  x Crear proyecto en repo de traxion
+  x Crear repo mirror en villeiv
+  > Configurar push a ambos remotos 
+    > Probando
   - Instalar el MCP de Traxion
   - Crear página Next con toda la especificacion
   - Importar repo de villeiv a Vercel
