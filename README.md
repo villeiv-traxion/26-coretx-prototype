@@ -67,14 +67,16 @@ import { Button } from "@traxion-global/design-system/react";
 
 ```
 src/app/            # App Router (layout, page, globals.css)
-public/             # Assets estáticos
 types/              # Declaraciones de módulos sin tipos (tailwind-preset del DS)
 tailwind.config.ts  # Preset + content del DS
 postcss.config.mjs
 .mcp.json           # Servidor MCP del design system
 .npmrc              # Registry de GitHub Packages para @traxion-global
+CLAUDE.md           # Guía para Claude Code
 docs/prototype.md   # Especificación del prototipo
 ```
+
+No hay `public/`: el boilerplate de `create-next-app` se eliminó. Créalo cuando hagan falta assets estáticos.
 
 ## MCP del design system
 
