@@ -38,12 +38,38 @@ El objetivo del prototipo es mostrar de manera conceptual cómo se despliegan la
 
 > **Tailwind 3.4, no v4.** `create-next-app` scaffoldea Tailwind v4 por defecto; aquí se generó el proyecto **sin** Tailwind y se añadió v3.4 a mano. Por eso hay [`tailwind.config.ts`](tailwind.config.ts) y [`postcss.config.mjs`](postcss.config.mjs) con `tailwindcss` + `autoprefixer`, y `globals.css` usa las directivas `@tailwind base/components/utilities` en vez del `@import "tailwindcss"` de v4. **No actualices a Tailwind 4** mientras el DS no lo soporte.
 
+## Design system
+
+Instalado vía la herramienta `install_design_system` del MCP:
+
+| Paquete | Versión |
+| --- | --- |
+| `@traxion-global/design-system` | 0.19.0 |
+| `lucide-react` (peer) | 0.469.0 — **fijado**, el DS no soporta la 1.x |
+
+Cableado en el proyecto:
+
+- [`tailwind.config.ts`](tailwind.config.ts) aplica `presets: [traxionPreset]` y escanea el dist del DS.
+- [`src/app/globals.css`](src/app/globals.css) importa `@traxion-global/design-system/theme.css` **antes** de las directivas `@tailwind`.
+- [`types/design-system.d.ts`](types/design-system.d.ts) declara el módulo `tailwind-preset`, que se distribuye como CJS sin tipos.
+
+```tsx
+import { Button } from "@traxion-global/design-system/react";
+
+<Button variant="default">Hola</Button>;
+```
+
+> Variantes reales de `Button`: `default`, `destructive`, `destructiveWarm`, `outline`, `secondary`, `ghost`, `link`. **No existe `primary`** (el ejemplo que devuelve el instalador del MCP es incorrecto).
+>
+> El instalador del MCP asume rutas `./app` y `styles/globals.css`; en este proyecto (`src/`, App Router) hay que revisar a mano lo que escribe en `tailwind.config.ts` tras cada ejecución.
+
 ## Estructura
 
 ```
 src/app/            # App Router (layout, page, globals.css)
 public/             # Assets estáticos
-tailwind.config.ts  # Content incluye el dist del DS
+types/              # Declaraciones de módulos sin tipos (tailwind-preset del DS)
+tailwind.config.ts  # Preset + content del DS
 postcss.config.mjs
 .mcp.json           # Servidor MCP del design system
 .npmrc              # Registry de GitHub Packages para @traxion-global

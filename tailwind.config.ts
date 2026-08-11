@@ -1,8 +1,8 @@
+import traxionPreset from "@traxion-global/design-system/tailwind-preset";
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  // Cuando se instale `@traxion-global/design-system`, añadir aquí su preset:
-  // presets: [require("@traxion-global/design-system/tailwind-preset")],
+  presets: [traxionPreset],
   content: [
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
     // El DS emite clases sin prefijo desde su dist; hay que escanearlo para

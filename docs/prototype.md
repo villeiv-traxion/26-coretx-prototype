@@ -27,7 +27,8 @@
   x Configurar push a ambos remotos
   x Instalar el MCP de Traxion
   x Crear página Next
-  > Instalando design system
+  x Instalando design system
+  - Elimina todo el boilerplate de Next
   - Añade skills relevantes de pgd
   - Importar repo de villeiv a Vercel
   - Prueba de deploy en Vercel
