@@ -28,8 +28,8 @@
   x Instalar el MCP de Traxion
   x Crear página Next
   x Instalando design system
-  - Elimina todo el boilerplate de Next
-  - Añade skills relevantes de pgd
-  - Importar repo de villeiv a Vercel
-  - Prueba de deploy en Vercel
+  x Importar repo de villeiv a Vercel
+  x Prueba de deploy en Vercel
+  > Elimina todo el boilerplate de Next
+  > Añade skills relevantes de pgd
   - Construye el app con la especificacion
