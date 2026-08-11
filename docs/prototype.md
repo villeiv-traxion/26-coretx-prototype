@@ -1,0 +1,31 @@
+- Proyecto: CoreTX (antes Network OS)
+  - Principal plataforma de Traxion donde viven la aplicaciones especializadas para cada divisón: carga, movilidad de personas y logística. Y también los ejes transversales CoreTX Intelligence y CoreTX Navigate.
+  - Este proyecto es un prototipo para mostrar de manera conceptual cómo se despliegan las aplicaciones de Traxion y los ejes transversales de la plataforma.
+
+- Diseño
+  - El prototipo debe usar el MCP del design system.
+  - El prototipo debe ser responsive y adaptarse a diferentes tamaños de pantalla.
+
+- Funcionalidades
+  - Home: Pantalla de inicio con cards que sirven de acceso directo a las aplicaciones y ejes transversales:
+    - Logistica y tecnología
+      - CoreTX Logistics: Gestión Integral de Operaciones Logísticas.
+        - Traxnova
+      - CoreTX One: Brokerage Cross-Border, Intra-MX e Intra-USA.
+    - Carga
+      - CoreTX Fleet: Gestión integral de la División Carga.
+    - Personas
+      - CoreTX MIND: Gestión integral de la División Personas.
+    - Transversales
+      - CoreTX Intelligence: Sistemas de Gestión, Datos y Decisión.
+      - CoreTX Navigate: Ejecución Comercial Corporativa.
+  - Menú de hamburguesa que despliega un panel con todos los servicios y apps disponibles: debe abrir un panel a la izquierda con todas las apps y servicios disponibles, los CoreTX son las apps principales y esos abren submenus al hover o tap que muestran sus apps adicionales
+
+- Construir el prototipo
+  - Crear proyecto en repo de traxion
+  - Crear repo mirror en villeiv
+  - Configurar push a ambos remotos 
+  - Instalar el MCP de Traxion
+  - Crear página Next con toda la especificacion
+  - Importar repo de villeiv a Vercel
+  - Prueba de deploy en Vercel
