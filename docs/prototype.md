@@ -24,9 +24,8 @@
 - Construir el prototipo
   x Crear proyecto en repo de traxion
   x Crear repo mirror en villeiv
-  > Configurar push a ambos remotos 
-    > Probando
-  - Instalar el MCP de Traxion
+  x Configurar push a ambos remotos
+  x Instalar el MCP de Traxion
   - Crear página Next con toda la especificacion
   - Importar repo de villeiv a Vercel
   - Prueba de deploy en Vercel

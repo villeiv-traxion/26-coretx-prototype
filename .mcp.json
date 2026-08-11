@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "new-traxion-design-system": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "tsx",
+        "C:/Apps y websites/8-traxion-global-design-system/packages/mcp/src/index.ts"
+      ],
+      "env": {}
+    }
+  }
+}

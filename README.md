@@ -22,7 +22,7 @@ El objetivo del prototipo es mostrar de manera conceptual cómo se despliegan la
 
 ## Diseño
 
-- El prototipo usa el **MCP del design system de Traxion**.
+- Toda la UI se construye con **`@traxion-global/design-system`**, consultado a través del MCP `new-traxion-design-system` (componentes, stories, tokens y guidelines) **antes** de escribir markup. No se reinventan componentes ni estilos que el DS ya provee.
 - La interfaz es **responsive** y se adapta a distintos tamaños de pantalla.
 
 ## Stack
@@ -31,10 +31,26 @@ El objetivo del prototipo es mostrar de manera conceptual cómo se despliegan la
 - Design system de Traxion vía MCP.
 - Despliegue en [Vercel](https://vercel.com).
 
+## MCP del design system
+
+El servidor MCP está declarado en [`.mcp.json`](.mcp.json) y apunta al **repo local** del design system:
+
+```
+C:/Apps y websites/8-traxion-global-design-system/packages/mcp/src/index.ts
+```
+
+Requisitos:
+
+1. Tener clonado el repo `8-traxion-global-design-system` en esa ruta (si está en otra, ajusta `.mcp.json`).
+2. Reiniciar Claude Code y aprobar el servidor MCP del proyecto la primera vez.
+3. `NODE_AUTH_TOKEN` en el entorno con un token de GitHub Packages con permiso `read:packages` — el paquete `@traxion-global/design-system` es privado y se resuelve vía [`.npmrc`](.npmrc).
+
+Herramientas expuestas por el MCP (ya permitidas en `.claude/settings.local.json`): `version`, `install_design_system`, `get_guideline`, `list_components`, `get_component`, `get_component_stories`.
+
 ## Puesta en marcha
 
 ```bash
-npm install
+npm install          # requiere NODE_AUTH_TOKEN para el paquete privado del DS
 npm run dev
 ```
 
@@ -42,12 +58,19 @@ La app queda disponible en `http://localhost:3000`.
 
 ## Repositorios y despliegue
 
-El proyecto vive en el repo de Traxion y cuenta con un repo espejo en `villeiv`, con push configurado a ambos remotos. El repo de `villeiv` es el que se importa a Vercel para el despliegue.
+El proyecto vive en el repo de Traxion y cuenta con un repo espejo en `villeiv`. El repo espejo es el que se importa a Vercel para el despliegue.
+
+| Rol | Repositorio |
+| --- | --- |
+| Principal | https://github.com/villeiv-traxion/26-coretx-prototype |
+| Espejo (Vercel) | https://github.com/villeiv/26-coretx-prototype-mirror |
+
+`origin` está configurado con dos push-URLs, de modo que un solo `git push` actualiza ambos remotos:
 
 ```bash
-git remote add origin <repo-traxion>
-git remote set-url --add --push origin <repo-traxion>
-git remote set-url --add --push origin <repo-villeiv>
+git remote add origin https://github.com/villeiv-traxion/26-coretx-prototype.git
+git remote set-url --add --push origin https://github.com/villeiv-traxion/26-coretx-prototype.git
+git remote set-url --add --push origin https://github.com/villeiv/26-coretx-prototype-mirror.git
 ```
 
 ## Documentación
