@@ -27,9 +27,28 @@ El objetivo del prototipo es mostrar de manera conceptual cómo se despliegan la
 
 ## Stack
 
-- [Next.js](https://nextjs.org) para la aplicación web.
-- Design system de Traxion vía MCP.
-- Despliegue en [Vercel](https://vercel.com).
+| Pieza | Versión | Nota |
+| --- | --- | --- |
+| [Next.js](https://nextjs.org) | 16.3.0 | App Router, TypeScript, Turbopack, `src/` |
+| React | 19.2.8 | |
+| [Tailwind CSS](https://tailwindcss.com) | **3.4.x** | Fijado a v3 a propósito — es la versión que soporta el DS |
+| PostCSS + Autoprefixer | 8.x / 10.x | Pipeline clásico de Tailwind v3 |
+| ESLint | 9.x | `eslint-config-next` |
+| [Vercel](https://vercel.com) | — | Despliegue |
+
+> **Tailwind 3.4, no v4.** `create-next-app` scaffoldea Tailwind v4 por defecto; aquí se generó el proyecto **sin** Tailwind y se añadió v3.4 a mano. Por eso hay [`tailwind.config.ts`](tailwind.config.ts) y [`postcss.config.mjs`](postcss.config.mjs) con `tailwindcss` + `autoprefixer`, y `globals.css` usa las directivas `@tailwind base/components/utilities` en vez del `@import "tailwindcss"` de v4. **No actualices a Tailwind 4** mientras el DS no lo soporte.
+
+## Estructura
+
+```
+src/app/            # App Router (layout, page, globals.css)
+public/             # Assets estáticos
+tailwind.config.ts  # Content incluye el dist del DS
+postcss.config.mjs
+.mcp.json           # Servidor MCP del design system
+.npmrc              # Registry de GitHub Packages para @traxion-global
+docs/prototype.md   # Especificación del prototipo
+```
 
 ## MCP del design system
 
@@ -51,10 +70,10 @@ Herramientas expuestas por el MCP (ya permitidas en `.claude/settings.local.json
 
 ```bash
 npm install          # requiere NODE_AUTH_TOKEN para el paquete privado del DS
-npm run dev
+npm run dev          # http://localhost:3000
+npm run build        # build de producción
+npm run lint         # eslint
 ```
-
-La app queda disponible en `http://localhost:3000`.
 
 ## Repositorios y despliegue
 

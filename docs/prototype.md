@@ -26,6 +26,9 @@
   x Crear repo mirror en villeiv
   x Configurar push a ambos remotos
   x Instalar el MCP de Traxion
-  - Crear página Next con toda la especificacion
+  x Crear página Next
+  > Instalando design system
+  - Añade skills relevantes de pgd
   - Importar repo de villeiv a Vercel
   - Prueba de deploy en Vercel
+  - Construye el app con la especificacion
