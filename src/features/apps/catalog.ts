@@ -23,7 +23,10 @@ export type AppId =
 export type CoretxApp = {
   id: AppId;
   category: CategoryId;
+  /** Icono compacto para el panel lateral. */
   icon: LucideIcon;
+  /** Ilustración de la card en el Home (`public/apps/<id>.svg`). */
+  illustration: string;
   /**
    * Apps adicionales que cuelgan de la app principal. Son nombres propios de
    * producto, así que no se traducen.
@@ -39,17 +42,48 @@ export const CATEGORY_ORDER: CategoryId[] = [
 ];
 
 export const APPS: CoretxApp[] = [
-  { id: "logistics", category: "logistics", icon: Boxes, subApps: ["Traxnova"] },
-  { id: "one", category: "logistics", icon: Globe2, subApps: [] },
-  { id: "fleet", category: "cargo", icon: Truck, subApps: [] },
-  { id: "mind", category: "people", icon: Users, subApps: [] },
+  {
+    id: "logistics",
+    category: "logistics",
+    icon: Boxes,
+    illustration: "/apps/logistics.svg",
+    subApps: ["Traxnova", "Bodegas"],
+  },
+  {
+    id: "one",
+    category: "logistics",
+    icon: Globe2,
+    illustration: "/apps/one.svg",
+    subApps: ["Crossdock", "Aduanas"],
+  },
+  {
+    id: "fleet",
+    category: "cargo",
+    icon: Truck,
+    illustration: "/apps/fleet.svg",
+    subApps: ["Rutas", "Taller"],
+  },
+  {
+    id: "mind",
+    category: "people",
+    icon: Users,
+    illustration: "/apps/mind.svg",
+    subApps: ["Turnos", "Rondines"],
+  },
   {
     id: "intelligence",
     category: "transversal",
     icon: BarChart3,
-    subApps: [],
+    illustration: "/apps/intelligence.svg",
+    subApps: ["Tableros", "Pronósticos"],
   },
-  { id: "navigate", category: "transversal", icon: Compass, subApps: [] },
+  {
+    id: "navigate",
+    category: "transversal",
+    icon: Compass,
+    illustration: "/apps/navigate.svg",
+    subApps: ["Cotizador", "Pipeline"],
+  },
 ];
 
 export function getAppsByCategory(category: CategoryId): CoretxApp[] {

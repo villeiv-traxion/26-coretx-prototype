@@ -5,9 +5,9 @@ import { AppCard } from "./AppCard";
 import { getAppsByCategory, type CategoryId } from "./catalog";
 
 const styles = {
-  section: "flex w-full flex-col gap-4",
-  heading: "text-sm font-semibold uppercase tracking-wide text-muted-foreground",
-  grid: "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
+  section: "flex flex-col gap-4 rounded-xl bg-[#E9E9E9] p-5",
+  heading: "text-sm font-bold text-muted-foreground",
+  cards: "flex flex-wrap gap-4",
 };
 
 interface AppCategorySectionProps {
@@ -21,7 +21,7 @@ export function AppCategorySection({ category }: AppCategorySectionProps) {
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>{t.categories[category]}</h2>
-      <div className={styles.grid}>
+      <div className={styles.cards}>
         {apps.map((app) => (
           <AppCard key={app.id} app={app} />
         ))}

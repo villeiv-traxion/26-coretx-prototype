@@ -21,16 +21,28 @@ No hay framework de tests configurado. `npm run build` es la única verificació
 
 ## Stack y restricciones no obvias
 
-Next.js 16 (App Router, Turbopack, `src/`, alias `@/*`), React 19, TypeScript.
+Next.js 16 (App Router, `src/`, alias `@/*`), React 19, TypeScript. El build usa Turbopack; el dev server **no** (ver abajo).
 
 **Tailwind está fijado en 3.4 y no debe subirse a v4** mientras el design system no lo soporte. `create-next-app` scaffoldea v4 por defecto; este proyecto se generó con `--no-tailwind` y se añadió v3.4 a mano. Consecuencias que hay que respetar:
 
 - `tailwind.config.ts` + `postcss.config.mjs` con `tailwindcss` + `autoprefixer` (pipeline clásico v3), no `@tailwindcss/postcss`.
 - `src/app/globals.css` usa `@tailwind base/components/utilities`, no el `@import "tailwindcss"` de v4.
 
+### El dev server usa webpack a propósito — no lo pases a Turbopack
+
+`npm run dev` corre `next dev --webpack`. **No quites ese flag.** Tailwind v3 descubre clases escaneando los globs de `content`, pero Turbopack no registra esos archivos como dependencias del CSS: al editar `src/**` no recompila la hoja de estilos y sirve CSS obsoleto indefinidamente (reiniciar no basta de forma fiable). El síntoma es traicionero — las utilidades que además usa el bundle del DS (`bg-muted`, `p-5`, `rounded-xl`) sí aparecen, y sólo faltan las que son exclusivas de tu código, así que parece un bug de layout y no de compilación.
+
+Si un cambio de estilos "no se aplica", **antes de tocar el CSS comprueba si la clase existe en la hoja servida**:
+
+```bash
+curl -s http://localhost:3000/_next/static/css/app/layout.css | grep -o '\.[a-zA-Z\\:-]*grid-cols-3'
+```
+
+Ojo con el escape: en el CSS las variantes llevan barra invertida (`.lg\:grid-cols-3`), así que un `grep 'lg:grid-cols-3'` da cero falsos negativos. Busca sin los dos puntos. `npm run build` sí genera el CSS correcto (compila de cero), así que contrastar dev contra el build de `.next/static/chunks/*.css` distingue "clase mal escrita" de "dev server obsoleto".
+
 `lucide-react` está **fijado en 0.469.0** porque es el peer que declara el DS. `npm install lucide-react` sin versión instala la 1.x y rompe la compatibilidad.
 
-No existe `public/`: el boilerplate de Next se eliminó a propósito. Créalo solo si hacen falta assets estáticos.
+`public/` sólo contiene `public/apps/*.svg`: las ilustraciones de las cards del Home, una por app (`<id>.svg`, referenciadas desde `illustration` en `src/features/apps/catalog.ts`). El boilerplate de assets de Next se eliminó a propósito — no lo reintroduzcas.
 
 ## Construcción de UI
 
@@ -77,3 +89,13 @@ El MCP apunta al **repo local** del DS en `C:/Apps y websites/8-traxion-global-d
 ## Git
 
 `origin` tiene dos push-URLs configuradas: un solo `git push` actualiza el repo principal (`villeiv-traxion/26-coretx-prototype`) y el espejo (`villeiv/26-coretx-prototype-mirror`), que es el que consume Vercel. No conviertas eso en dos remotos separados sin avisar.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

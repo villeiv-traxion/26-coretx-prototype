@@ -11,8 +11,8 @@ const DEMO_USER_NAME = "Ana Torres";
 const styles = {
   wrapper: "bg-secondary h-14",
   container: "container flex h-full items-center justify-between gap-4 px-4",
-  left: "flex items-center",
-  homeLink: "flex justify-center",
+  left: "flex items-center gap-3",
+  homeLink: "flex items-center",
   logo: "w-28 text-white sm:w-32",
   right: "flex items-center justify-end",
 };
@@ -23,10 +23,10 @@ export function Header() {
       <div className={styles.container}>
         <div className={styles.left}>
           <AppsPanel />
+          <Link href="/" className={styles.homeLink}>
+            <Logo className={styles.logo} />
+          </Link>
         </div>
-        <Link href="/" className={styles.homeLink}>
-          <Logo className={styles.logo} />
-        </Link>
         <div className={styles.right}>
           <UserControls userName={DEMO_USER_NAME} />
         </div>

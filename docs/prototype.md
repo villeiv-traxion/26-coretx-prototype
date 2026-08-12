@@ -9,14 +9,14 @@
 - Funcionalidades
   - Home: Pantalla de inicio con cards que sirven de acceso directo a las aplicaciones y ejes transversales:
     - Logistica y tecnología
-      - CoreTX Logistics: Gestión Integral de Operaciones Logísticas.
+      - CoreTX Logistics: Gestión Integral de Operaciones Logísticas. SVG: invoicesSvg
         - Traxnova
-      - CoreTX One: Brokerage Cross-Border, Intra-MX e Intra-USA.
+      - CoreTX One: Brokerage Cross-Border, Intra-MX e Intra-USA. SVG: TruckSvg
     - Carga
-      - CoreTX Fleet: Gestión integral de la División Carga.
+      - CoreTX Fleet: Gestión integral de la División Carga. SVG: TrackingSvg
     - Personas
-      - CoreTX MIND: Gestión integral de la División Personas.
+      - CoreTX MIND: Gestión integral de la División Personas. SVG: PersonalTransportSvg
     - Transversales
-      - CoreTX Intelligence: Sistemas de Gestión, Datos y Decisión.
-      - CoreTX Navigate: Ejecución Comercial Corporativa.
+      - CoreTX Intelligence: Sistemas de Gestión, Datos y Decisión. SVG: SupportSvg
+      - CoreTX Navigate: Ejecución Comercial Corporativa. SVG: SupportSvg
   - Menú de hamburguesa que despliega un panel con todos los servicios y apps disponibles: debe abrir un panel a la izquierda con todas las apps y servicios disponibles, los CoreTX son las apps principales y esos abren submenus al hover o tap que muestran sus apps adicionales

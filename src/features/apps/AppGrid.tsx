@@ -10,7 +10,9 @@ const styles = {
   title: "text-center text-2xl font-medium md:text-3xl",
   subtitle:
     "w-full text-center text-base text-muted-foreground md:w-2/3 md:text-lg lg:w-1/2",
-  sections: "flex w-full flex-col gap-10",
+  // Flex, no grid: cada grupo ocupa lo que ocupan sus cards y los que caben
+  // comparten fila.
+  groups: "flex flex-wrap justify-center gap-6",
 };
 
 export function AppGrid() {
@@ -23,7 +25,7 @@ export function AppGrid() {
         <p className={styles.subtitle}>{t.home.subtitle}</p>
       </div>
 
-      <div className={styles.sections}>
+      <div className={styles.groups}>
         {CATEGORY_ORDER.map((category) => (
           <AppCategorySection key={category} category={category} />
         ))}

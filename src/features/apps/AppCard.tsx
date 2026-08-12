@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -12,17 +11,18 @@ import { useLanguage } from "@/features/i18n";
 import type { CoretxApp } from "./catalog";
 
 const styles = {
-  card: "group h-full grid grid-cols-[auto_1fr] content-start gap-x-4 p-4 shadow transition-shadow hover:shadow-md",
-  header: "self-start p-0 row-span-2",
-  iconWrapper:
-    "flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10",
-  icon: "h-7 w-7 text-primary",
-  content: "col-start-2 overflow-hidden p-0",
-  title: "mb-1 text-lg leading-tight sm:text-xl",
-  description: "mb-2 text-xs leading-tight text-muted-foreground",
-  subApps: "mb-3 flex flex-wrap gap-1.5",
-  footer: "col-span-2 p-0 pt-1 sm:col-span-1 sm:col-start-2",
-  button: "w-full sm:w-auto",
+  // Ancho fijo: es lo que define el ancho del wrapper gris de cada categoría.
+  // `max-w-full` evita que desborde en pantallas más estrechas que 380px.
+  card: "w-[380px] max-w-full grid grid-cols-[auto_1fr] p-2 sm:p-4 gap-x-4 shadow",
+  header: "self-center p-0 pb-1 sm:row-span-2",
+  svg: "w-16 h-16 sm:w-20 sm:h-20",
+  content: "overflow-hidden p-0 col-start-2",
+  title: "text-lg sm:text-xl mb-1 leading-tight group-[.bg-dark]:text-white",
+  description:
+    "text-xs text-muted-foreground leading-tight mb-2 group-[.bg-dark]:text-white/70",
+  linksSection: "p-0 col-span-2 sm:col-span-1 sm:col-start-2",
+  linksContainer: "grid gap-2 w-full sm:flex sm:flex-wrap sm:w-auto",
+  linkButton: "w-full sm:w-auto",
 };
 
 interface AppCardProps {
@@ -32,35 +32,40 @@ interface AppCardProps {
 export function AppCard({ app }: AppCardProps) {
   const { t } = useLanguage();
   const { name, description } = t.apps[app.id];
-  const Icon = app.icon;
 
   return (
     <Card className={styles.card}>
       <CardHeader className={styles.header}>
-        <div className={styles.iconWrapper}>
-          <Icon className={styles.icon} aria-hidden="true" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={app.illustration} alt={name} className={styles.svg} />
       </CardHeader>
 
       <CardContent className={styles.content}>
         <CardTitle className={styles.title}>{name}</CardTitle>
         <p className={styles.description}>{description}</p>
-        {app.subApps.length > 0 && (
-          <div className={styles.subApps}>
-            {app.subApps.map((subApp) => (
-              <Badge key={subApp} variant="secondary">
-                {subApp}
-              </Badge>
-            ))}
-          </div>
-        )}
       </CardContent>
 
-      <CardContent className={styles.footer}>
-        {/* Prototipo: las apps aún no tienen destino, el botón no navega. */}
-        <Button variant="outline" size="sm" className={styles.button}>
-          {t.common.open}
-        </Button>
+      <CardContent className={styles.linksSection}>
+        {/* Prototipo: ningún botón navega todavía. Cuando la app tiene apps
+            adicionales, éstas sustituyen al botón genérico "Abrir". */}
+        <div className={styles.linksContainer}>
+          {app.subApps.length > 0 ? (
+            app.subApps.map((subApp) => (
+              <Button
+                key={subApp}
+                variant="outline"
+                size="sm"
+                className={styles.linkButton}
+              >
+                {subApp}
+              </Button>
+            ))
+          ) : (
+            <Button variant="outline" size="sm" className={styles.linkButton}>
+              {t.common.open}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
