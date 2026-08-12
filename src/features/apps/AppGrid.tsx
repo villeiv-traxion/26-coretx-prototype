@@ -5,7 +5,10 @@ import { AppCategorySection } from "./AppCategorySection";
 import { CATEGORY_ORDER } from "./catalog";
 
 const styles = {
-  wrapper: "container flex flex-col items-center gap-10 py-8 sm:py-12",
+  // Sólo sube el espacio superior (entre el header y el logo); el inferior se
+  // mantiene, de ahí el `pt`/`pb` separados.
+  wrapper:
+    "container flex flex-col items-center gap-10 pb-8 pt-10 sm:pb-12 sm:pt-16",
   intro: "flex flex-col items-center gap-5",
   // El logo es 719x159 (4.5:1) y la caja 194x50 (3.9:1): `object-contain` lo
   // encaja sin deformarlo.
