@@ -10,18 +10,17 @@ import {
   SheetTrigger,
 } from "@traxion-global/design-system/react";
 import { useLanguage } from "@/features/i18n";
-import { CATEGORY_ORDER, getAppsByCategory } from "@/features/apps";
+import { APPS } from "@/features/apps";
 import { AppsPanelItem } from "./AppsPanelItem";
 
 const styles = {
   trigger:
     "flex items-center justify-center rounded-md p-1 text-white transition-colors hover:bg-white/10",
   triggerIcon: "h-6 w-6",
-  content: "w-[300px] overflow-y-auto sm:w-[360px]",
-  body: "mt-6 flex flex-col gap-6",
-  category: "flex flex-col gap-1",
-  categoryLabel:
-    "px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+  content: "w-[240px] overflow-y-auto sm:w-[288px]",
+  // Lista plana: sin títulos de categoría, todas las apps con el mismo
+  // espaciado entre sí.
+  body: "mt-6 flex flex-col gap-1",
 };
 
 export function AppsPanel() {
@@ -39,15 +38,8 @@ export function AppsPanel() {
         </SheetHeader>
 
         <div className={styles.body}>
-          {CATEGORY_ORDER.map((category) => (
-            <div key={category} className={styles.category}>
-              <span className={styles.categoryLabel}>
-                {t.categories[category]}
-              </span>
-              {getAppsByCategory(category).map((app) => (
-                <AppsPanelItem key={app.id} app={app} />
-              ))}
-            </div>
+          {APPS.map((app) => (
+            <AppsPanelItem key={app.id} app={app} />
           ))}
         </div>
       </SheetContent>
