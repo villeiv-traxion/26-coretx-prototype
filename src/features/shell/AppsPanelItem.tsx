@@ -10,7 +10,7 @@ import {
 } from "@traxion-global/design-system/react";
 import { useLanguage } from "@/features/i18n";
 import type { CoretxApp } from "@/features/apps";
-import { useHasHover } from "./useHasHover";
+import { useHasHover, useIsWideViewport } from "./useMediaQuery";
 
 /** Margen para cruzar el hueco entre el ítem y el submenú sin que se cierre. */
 const CLOSE_DELAY_MS = 120;
@@ -30,6 +30,7 @@ interface AppsPanelItemProps {
 export function AppsPanelItem({ app }: AppsPanelItemProps) {
   const { t } = useLanguage();
   const hasHover = useHasHover();
+  const isWide = useIsWideViewport();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | undefined>(undefined);
 
@@ -76,7 +77,9 @@ export function AppsPanelItem({ app }: AppsPanelItemProps) {
         <ChevronRight className={styles.chevron} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        side="right"
+        // En móvil el panel ocupa toda la pantalla: no queda hueco a la derecha
+        // y Radix lo voltearía sobre el propio panel. Ahí cae debajo del ítem.
+        side={isWide ? "right" : "bottom"}
         align="start"
         sideOffset={4}
         className={styles.subPanel}

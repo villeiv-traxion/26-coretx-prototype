@@ -5,7 +5,8 @@ import { AppCard } from "./AppCard";
 import { getAppsByCategory, type CategoryId } from "./catalog";
 
 const styles = {
-  section: "flex flex-col gap-2 rounded-xl bg-[#E9E9E9] p-4",
+  // En móvil ocupan todo el ancho; desde `sm` vuelven a medir lo que sus cards.
+  section: "flex w-full flex-col gap-2 rounded-xl bg-[#E9E9E9] p-4 sm:w-auto",
   heading: "text-sm font-bold uppercase text-muted-foreground",
   cards: "flex flex-wrap gap-4",
 };

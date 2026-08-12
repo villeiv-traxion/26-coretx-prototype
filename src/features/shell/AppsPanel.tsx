@@ -17,7 +17,8 @@ const styles = {
   trigger:
     "flex items-center justify-center rounded-md p-1 text-white transition-colors hover:bg-white/10",
   triggerIcon: "h-6 w-6",
-  content: "w-[240px] overflow-y-auto sm:w-[288px]",
+  // Pantalla completa en móvil; desde `sm` vuelve a ser un panel lateral.
+  content: "w-full overflow-y-auto sm:w-[288px]",
   // Lista plana: sin títulos de categoría, todas las apps con el mismo
   // espaciado entre sí.
   body: "mt-6 flex flex-col gap-1",
