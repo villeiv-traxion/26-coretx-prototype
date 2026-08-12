@@ -16,7 +16,7 @@ import type { CoretxApp } from "./catalog";
 const styles = {
   // En móvil ocupan todo el ancho disponible; desde `sm` el ancho es fijo y es
   // lo que define el ancho del wrapper gris de cada categoría.
-  card: "w-full sm:w-[350px] grid grid-cols-[auto_1fr] p-2 sm:p-4 gap-x-4 shadow-none",
+  card: "w-full sm:w-[290px] grid grid-cols-[auto_1fr] p-2 sm:p-4 gap-x-4 shadow-none",
   header: "self-center p-0 pb-1 sm:row-span-2",
   svg: "w-16 h-16 sm:w-20 sm:h-20",
   content: "overflow-hidden p-0 col-start-2",

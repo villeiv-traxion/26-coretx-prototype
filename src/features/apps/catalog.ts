@@ -22,11 +22,13 @@ export type CoretxApp = {
   hasAccess: boolean;
 };
 
-export const CATEGORY_ORDER: CategoryId[] = [
-  "logistics",
-  "cargo",
-  "people",
-  "transversal",
+/**
+ * Filas del Home en desktop. Cada array es una fila; en móvil y tablet se
+ * apilan todas las categorías en una columna.
+ */
+export const CATEGORY_ROWS: CategoryId[][] = [
+  ["logistics", "cargo"],
+  ["people", "transversal"],
 ];
 
 export const APPS: CoretxApp[] = [

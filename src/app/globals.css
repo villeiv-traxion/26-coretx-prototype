@@ -3,3 +3,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /*
+    1rem = 12px. Se expresa en % en vez de px para no anular el tamaño de fuente
+    que el usuario haya configurado en su navegador: 75% de los 16px por defecto
+    son exactamente 12px, pero escala si esa base cambia.
+  */
+  html {
+    font-size: 75%;
+  }
+}
