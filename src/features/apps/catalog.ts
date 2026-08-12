@@ -1,13 +1,3 @@
-import {
-  BarChart3,
-  Boxes,
-  Compass,
-  Globe2,
-  Truck,
-  Users,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-
 /** Ejes/categorías bajo los que se agrupan las apps en el Home y en el panel. */
 export type CategoryId = "logistics" | "cargo" | "people" | "transversal";
 
@@ -23,15 +13,13 @@ export type AppId =
 export type CoretxApp = {
   id: AppId;
   category: CategoryId;
-  /** Icono compacto para el panel lateral. */
-  icon: LucideIcon;
   /** Ilustración de la card en el Home (`public/apps/<id>.svg`). */
   illustration: string;
   /**
-   * Apps adicionales que cuelgan de la app principal. Son nombres propios de
-   * producto, así que no se traducen.
+   * En el producto real vendrá de los permisos del usuario. En el prototipo es
+   * fijo, para poder mostrar el estado sin acceso.
    */
-  subApps: string[];
+  hasAccess: boolean;
 };
 
 export const CATEGORY_ORDER: CategoryId[] = [
@@ -45,44 +33,39 @@ export const APPS: CoretxApp[] = [
   {
     id: "logistics",
     category: "logistics",
-    icon: Boxes,
     illustration: "/apps/logistics.svg",
-    subApps: ["Traxnova", "Bodegas"],
+    hasAccess: true,
   },
   {
     id: "one",
     category: "logistics",
-    icon: Globe2,
     illustration: "/apps/one.svg",
-    subApps: ["Crossdock", "Aduanas"],
+    hasAccess: true,
   },
   {
     id: "fleet",
     category: "cargo",
-    icon: Truck,
     illustration: "/apps/fleet.svg",
-    subApps: ["Rutas", "Taller"],
+    hasAccess: true,
   },
   {
     id: "mind",
     category: "people",
-    icon: Users,
     illustration: "/apps/mind.svg",
-    subApps: ["Turnos", "Rondines"],
+    // Ejemplo de app sin acceso: su botón sale deshabilitado con tooltip.
+    hasAccess: false,
   },
   {
     id: "intelligence",
     category: "transversal",
-    icon: BarChart3,
     illustration: "/apps/intelligence.svg",
-    subApps: ["Tableros", "Pronósticos"],
+    hasAccess: true,
   },
   {
     id: "navigate",
     category: "transversal",
-    icon: Compass,
     illustration: "/apps/navigate.svg",
-    subApps: ["Cotizador", "Pipeline"],
+    hasAccess: true,
   },
 ];
 

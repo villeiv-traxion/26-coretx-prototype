@@ -6,6 +6,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@traxion-global/design-system/react";
 import { useLanguage } from "@/features/i18n";
 import type { CoretxApp } from "./catalog";
@@ -21,12 +24,13 @@ const styles = {
   description:
     "text-xs text-muted-foreground leading-tight mb-2 sm:mb-3 group-[.bg-dark]:text-white/70",
   linksSection: "p-0 col-span-2 sm:col-span-1 sm:col-start-2",
-  // Dos columnas: cada botón ocupa el 50%, así entran dos por fila.
-  linksContainer: "grid w-full grid-cols-2 gap-2",
   // `size="lg"` (h-9 px-8) es la base para móvil; desde `sm` se restauran las
   // medidas del size `default` del DS (h-8 px-4 py-2), porque la prop `size` no
   // admite breakpoints.
   linkButton: "w-full sm:h-8 sm:px-4 sm:py-2",
+  // Un botón deshabilitado no emite eventos de puntero, así que el tooltip
+  // necesita colgar de un envoltorio y no del propio botón.
+  disabledWrapper: "inline-block w-full",
 };
 
 interface AppCardProps {
@@ -36,6 +40,7 @@ interface AppCardProps {
 export function AppCard({ app }: AppCardProps) {
   const { t } = useLanguage();
   const { name, description } = t.apps[app.id];
+  const openLabel = t.common.openApp.replace("{app}", name);
 
   return (
     <Card className={styles.card}>
@@ -50,26 +55,28 @@ export function AppCard({ app }: AppCardProps) {
       </CardContent>
 
       <CardContent className={styles.linksSection}>
-        {/* Prototipo: ningún botón navega todavía. Cuando la app tiene apps
-            adicionales, éstas sustituyen al botón genérico "Abrir". */}
-        <div className={styles.linksContainer}>
-          {app.subApps.length > 0 ? (
-            app.subApps.map((subApp) => (
-              <Button
-                key={subApp}
-                variant="outline"
-                size="lg"
-                className={styles.linkButton}
-              >
-                {subApp}
-              </Button>
-            ))
-          ) : (
-            <Button variant="outline" size="lg" className={styles.linkButton}>
-              {t.common.open}
-            </Button>
-          )}
-        </div>
+        {app.hasAccess ? (
+          // Prototipo: el botón aún no navega a ningún destino.
+          <Button variant="outline" size="lg" className={styles.linkButton}>
+            {openLabel}
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={styles.disabledWrapper} tabIndex={0}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  disabled
+                  className={styles.linkButton}
+                >
+                  {openLabel}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{t.common.noAccess}</TooltipContent>
+          </Tooltip>
+        )}
       </CardContent>
     </Card>
   );

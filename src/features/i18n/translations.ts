@@ -2,6 +2,8 @@ export const translations = {
   es: {
     common: {
       open: "Abrir",
+      openApp: "Abrir {app}",
+      noAccess: "No tienes acceso a esta aplicación.",
       language: "Idioma",
       languageEn: "Inglés",
       languageEs: "Español",
@@ -68,6 +70,8 @@ export const translations = {
   en: {
     common: {
       open: "Open",
+      openApp: "Open {app}",
+      noAccess: "You don't have access to this application.",
       language: "Language",
       languageEn: "English",
       languageEs: "Spanish",
