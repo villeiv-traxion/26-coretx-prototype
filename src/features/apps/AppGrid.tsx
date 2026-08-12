@@ -11,8 +11,8 @@ const styles = {
     "container flex flex-col items-center gap-10 pb-8 pt-10 sm:pb-12 sm:pt-16",
   intro: "flex flex-col items-center gap-5",
   // El logo es 719x159 (4.5:1) y la caja 194x50 (3.9:1): `object-contain` lo
-  // encaja sin deformarlo.
-  logo: "h-[50px] w-[194px] object-contain",
+  // encaja sin deformarlo. En móvil, un 30% menos (136x35).
+  logo: "h-[35px] w-[136px] object-contain sm:h-[50px] sm:w-[194px]",
   // `w-full` + `max-w` en vez de ancho fijo: mide 680px cuando hay espacio y no
   // desborda en pantallas más estrechas.
   subtitle:
