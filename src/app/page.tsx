@@ -1,3 +1,5 @@
+import { AppGrid } from "@/features/apps";
+
 export default function Home() {
-  return <main className="min-h-screen" />;
+  return <AppGrid />;
 }
