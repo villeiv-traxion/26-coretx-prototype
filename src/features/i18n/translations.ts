@@ -14,9 +14,9 @@ export const translations = {
         "Todas las apps y ejes transversales disponibles en CoreTX.",
     },
     home: {
-      title: "Una plataforma para toda Traxion.",
+      title: "Una familia de plataformas conectada",
       subtitle:
-        "Las aplicaciones especializadas de cada división y los ejes transversales, en un solo lugar.",
+        "CoreTX conecta las plataformas, los sistemas de gestión, los datos y los agentes de IA de TRAXION para coordinar logística, transporte, brokerage y movilidad.",
     },
     categories: {
       logistics: "Logística y tecnología",
@@ -79,9 +79,9 @@ export const translations = {
       panelDescription: "Every app and cross-cutting axis available in CoreTX.",
     },
     home: {
-      title: "One platform for all of Traxion.",
+      title: "A connected family of platforms",
       subtitle:
-        "Each division's specialized applications and the cross-cutting axes, all in one place.",
+        "CoreTX connects TRAXION's platforms, management systems, data and AI agents to coordinate logistics, transport, brokerage and mobility.",
     },
     categories: {
       logistics: "Logistics and technology",
