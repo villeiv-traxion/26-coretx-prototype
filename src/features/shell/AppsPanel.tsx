@@ -1,9 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { Menu } from "lucide-react";
 import {
-  Accordion,
   Sheet,
   SheetContent,
   SheetDescription,
@@ -14,7 +12,6 @@ import {
 import { useLanguage } from "@/features/i18n";
 import { CATEGORY_ORDER, getAppsByCategory } from "@/features/apps";
 import { AppsPanelItem } from "./AppsPanelItem";
-import { useHasHover } from "./useHasHover";
 
 const styles = {
   trigger:
@@ -29,24 +26,6 @@ const styles = {
 
 export function AppsPanel() {
   const { t } = useLanguage();
-  const hasHover = useHasHover();
-  const [openItems, setOpenItems] = useState<string[]>([]);
-
-  const handleHoverOpen = useCallback(
-    (appId: string) => {
-      if (!hasHover) return;
-      setOpenItems((prev) => (prev.includes(appId) ? prev : [...prev, appId]));
-    },
-    [hasHover],
-  );
-
-  const handleHoverClose = useCallback(
-    (appId: string) => {
-      if (!hasHover) return;
-      setOpenItems((prev) => prev.filter((id) => id !== appId));
-    },
-    [hasHover],
-  );
 
   return (
     <Sheet>
@@ -65,20 +44,9 @@ export function AppsPanel() {
               <span className={styles.categoryLabel}>
                 {t.categories[category]}
               </span>
-              <Accordion
-                type="multiple"
-                value={openItems}
-                onValueChange={setOpenItems}
-              >
-                {getAppsByCategory(category).map((app) => (
-                  <AppsPanelItem
-                    key={app.id}
-                    app={app}
-                    onHoverOpen={handleHoverOpen}
-                    onHoverClose={handleHoverClose}
-                  />
-                ))}
-              </Accordion>
+              {getAppsByCategory(category).map((app) => (
+                <AppsPanelItem key={app.id} app={app} />
+              ))}
             </div>
           ))}
         </div>
