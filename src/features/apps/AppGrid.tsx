@@ -7,9 +7,9 @@ import { CATEGORY_ORDER } from "./catalog";
 const styles = {
   wrapper: "container flex flex-col items-center gap-10 py-8 sm:py-12",
   intro: "flex flex-col items-center gap-5",
-  // El logo es 719x159 (4.5:1) y la caja 216x56 (3.9:1): `object-contain` lo
+  // El logo es 719x159 (4.5:1) y la caja 194x50 (3.9:1): `object-contain` lo
   // encaja sin deformarlo.
-  logo: "h-[56px] w-[216px] object-contain",
+  logo: "h-[50px] w-[194px] object-contain",
   // `w-full` + `max-w` en vez de ancho fijo: mide 680px cuando hay espacio y no
   // desborda en pantallas más estrechas.
   subtitle:
