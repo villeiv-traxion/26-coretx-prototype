@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoreTX Captura — el caso</title>
+<style>
+:root{
+  /* Tokens del design system de Traxion, copiados de dist/theme.css: el paquete es privado
+     y este archivo no pide nada a la red. */
+  --background:0 0% 100%; --foreground:0 0% 10%;
+  --primary:64 100% 44%; --primary-dark:63 100% 37%; --primary-foreground:214 3% 25%;
+  --secondary:214 3% 40%;
+  --muted:0 0% 96.1%; --muted-foreground:0 0% 45.1%;
+  --destructive:3 55.8% 51.2%; --destructive-warm:12 100% 56.7%;
+  --border:0 0% 89.8%; --radius:.5rem;
+  --ancho:min(1060px, 100% - 3rem);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:4.5rem}
+body{
+  margin:0; background:hsl(var(--background)); color:hsl(var(--foreground));
+  font-family:Roboto,"Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{line-height:1.2; margin:0; font-weight:600; letter-spacing:-.01em}
+h1{font-size:clamp(2rem,5vw,3.25rem); font-weight:700; letter-spacing:-.03em}
+h2{font-size:clamp(1.5rem,3vw,2rem); letter-spacing:-.02em}
+h3{font-size:1.0625rem}
+p{margin:0}
+a{color:inherit}
+.env{width:var(--ancho); margin-inline:auto}
+section{padding:4rem 0; border-top:1px solid hsl(var(--border))}
+.rotulo{font-size:.75rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+  color:hsl(var(--muted-foreground)); margin-bottom:.65rem}
+.entrada{font-size:1.0625rem; color:hsl(var(--muted-foreground)); max-width:62ch; margin-top:.9rem}
+.num{font-variant-numeric:tabular-nums}
+
+header{position:sticky; top:0; z-index:30; background:hsl(var(--background)/.93);
+  backdrop-filter:blur(8px); border-bottom:1px solid hsl(var(--border))}
+header .env{display:flex; align-items:center; gap:1.25rem; height:3.5rem}
+.marca{font-weight:700; letter-spacing:-.02em; white-space:nowrap}
+.marca span{color:hsl(var(--muted-foreground)); font-weight:400}
+nav{display:flex; gap:1.15rem; overflow-x:auto; scrollbar-width:none; flex:1}
+nav::-webkit-scrollbar{display:none}
+nav a{color:hsl(var(--muted-foreground)); text-decoration:none; font-size:.875rem;
+  white-space:nowrap; padding:.25rem 0; border-bottom:2px solid transparent}
+nav a:hover{color:hsl(var(--foreground))}
+nav a.activa{color:hsl(var(--foreground)); border-bottom-color:hsl(var(--primary))}
+
+.boton{display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1.1rem;
+  border-radius:.375rem; border:1px solid transparent; font-size:.875rem; font-weight:600;
+  background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); text-decoration:none;
+  white-space:nowrap; cursor:pointer}
+.boton:hover{background:hsl(var(--primary-dark)); color:#fff}
+.boton.borde{background:none; border-color:hsl(var(--border)); font-weight:500}
+.boton.borde:hover{background:hsl(var(--muted)); color:inherit}
+
+.portada{padding:5rem 0 3.5rem}
+.portada h1{max-width:18ch}
+.marcador{background:linear-gradient(transparent 62%, hsl(var(--primary)/.55) 62%); padding:0 .1em}
+.acciones{display:flex; flex-wrap:wrap; gap:.75rem; margin-top:2rem; align-items:center}
+.cifras{display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:1px;
+  background:hsl(var(--border)); border:1px solid hsl(var(--border));
+  border-radius:var(--radius); overflow:hidden; margin-top:2.5rem}
+.cifra{background:hsl(var(--background)); padding:1.1rem 1.35rem}
+.cifra b{display:block; font-size:1.9rem; font-weight:700; letter-spacing:-.03em; line-height:1.1}
+.cifra small{display:block; color:hsl(var(--muted-foreground)); font-size:.8125rem; margin-top:.3rem}
+
+.rejilla{display:grid; gap:1.25rem; margin-top:2rem}
+@media(min-width:820px){ .rejilla.tres{grid-template-columns:repeat(3,1fr)} .rejilla.dos{grid-template-columns:1fr 1fr} }
+.tarjeta{border:1px solid hsl(var(--border)); border-radius:var(--radius); padding:1.35rem}
+.tarjeta h3{margin-bottom:.4rem}
+.tarjeta p{color:hsl(var(--muted-foreground)); font-size:.9375rem}
+.destacado{border-left:3px solid hsl(var(--primary)); background:hsl(var(--muted));
+  padding:1.15rem 1.4rem; border-radius:0 var(--radius) var(--radius) 0; margin-top:2rem}
+.aviso{border-left-color:hsl(var(--destructive-warm)); background:hsl(var(--destructive-warm)/.07)}
+.frase{font-size:1.2rem; font-weight:500; max-width:60ch; line-height:1.45}
+
+table{border-collapse:collapse; width:100%; font-size:.9375rem}
+.desliza{overflow-x:auto; margin-top:1.5rem; border:1px solid hsl(var(--border)); border-radius:var(--radius)}
+th,td{text-align:left; padding:.65rem .85rem; border-bottom:1px solid hsl(var(--border))}
+th{font-weight:600; font-size:.75rem; letter-spacing:.06em; text-transform:uppercase;
+  color:hsl(var(--muted-foreground)); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.der,th.der{text-align:right}
+input[type=number]{width:100%; min-width:88px; font:inherit; font-size:.9375rem;
+  font-variant-numeric:tabular-nums; text-align:right; padding:.4rem .55rem;
+  border:1px solid hsl(var(--border)); border-radius:.375rem; background:hsl(var(--background)); color:inherit}
+input:focus{outline:2px solid hsl(var(--primary)); outline-offset:-1px}
+
+.duelo{display:grid; gap:1px; background:hsl(var(--border)); border:1px solid hsl(var(--border));
+  border-radius:var(--radius); overflow:hidden; margin-top:1.25rem}
+@media(min-width:700px){ .duelo{grid-template-columns:1fr 1fr} }
+.duelo > div{background:hsl(var(--background)); padding:1.35rem}
+.duelo b{display:block; font-size:2.5rem; font-weight:700; letter-spacing:-.04em; line-height:1;
+  font-variant-numeric:tabular-nums}
+.duelo .malo b{color:hsl(var(--destructive))}
+.duelo .bueno b{color:hsl(var(--primary-dark))}
+.duelo small{display:block; color:hsl(var(--muted-foreground)); font-size:.8125rem;
+  margin-top:.5rem; line-height:1.4}
+
+.apagado{display:grid; gap:.5rem; margin-top:1.5rem}
+.apagado .fila{display:grid; grid-template-columns:4.5rem 1fr 5.5rem; gap:1rem; align-items:center}
+.pista-barra{height:24px; background:hsl(var(--muted)); border-radius:.25rem; overflow:hidden}
+.pista-barra i{display:block; height:100%; background:hsl(var(--secondary)/.7)}
+.fila:nth-child(1) .pista-barra i{background:hsl(var(--destructive)/.75)}
+.fila:nth-child(2) .pista-barra i{background:hsl(var(--destructive-warm)/.75)}
+.fila:nth-child(4) .pista-barra i{background:hsl(var(--primary-dark)/.8)}
+.chico{font-size:.8125rem; color:hsl(var(--muted-foreground))}
+footer{padding:2.5rem 0 3.5rem; border-top:1px solid hsl(var(--border));
+  color:hsl(var(--muted-foreground)); font-size:.8125rem}
+@media print{ header{position:static} section{page-break-inside:avoid} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="env">
+    <span class="marca">CoreTX Captura <span>· TRAXION</span></span>
+    <nav>
+      <a href="#problema">Problema</a>
+      <a href="#solucion">Solución</a>
+      <a href="#agregacion">Por qué no es un Excel</a>
+      <a href="#plan">Plan</a>
+      <a href="#huecos">Huecos</a>
+    </nav>
+    <a class="boton" href="mvp.html">Abrir la aplicación</a>
+  </div>
+</header>
+
+<div class="env portada">
+  <p class="rotulo">División Logística · agosto de 2026</p>
+  <h1>Cada periodo pedimos <span class="marcador">2,577 números</span> por correo.</h1>
+  <p class="entrada">
+    Se contestan en Excel y alguien los concentra. No hay forma de saber quién escribió un
+    número, cuándo, ni si lo corrigió después.
+  </p>
+  <div class="acciones">
+    <a class="boton" href="mvp.html">Abrir la aplicación</a>
+    <span class="chico">Se abre en este mismo equipo, sin internet y sin instalar nada.</span>
+  </div>
+
+  <div class="cifras">
+    <div class="cifra"><b class="num">2,577</b><small>envíos por periodo</small></div>
+    <div class="cifra"><b class="num">23</b><small>indicadores, 50 campos</small></div>
+    <div class="cifra"><b class="num">141</b><small>operaciones, 9 compañías</small></div>
+    <div class="cifra"><b class="num">239</b><small>reglas revisadas a ojo</small></div>
+    <div class="cifra"><b class="num">9</b><small>personas concentran la captura</small></div>
+  </div>
+</div>
+
+<!-- ==================================================== 01 -->
+<section id="problema">
+  <div class="env">
+    <p class="rotulo">01 · El problema</p>
+    <h2>No es que sea mucho trabajo. Es que no queda registro.</h2>
+
+    <div class="rejilla tres">
+      <div class="tarjeta">
+        <h3>El número no tiene dueño ni hora</h3>
+        <p>Llega en un correo, se pega en una hoja. Si más tarde alguien pregunta de dónde
+        salió, la respuesta es un hilo de correo.</p>
+      </div>
+      <div class="tarjeta">
+        <h3>La regla se aplica tarde, o no se aplica</h3>
+        <p>Las 239 validaciones existen y están redactadas. Se revisan a ojo, sobre una hoja
+        ya entregada: el error se descubre cuando ya se decidió con él.</p>
+      </div>
+      <div class="tarjeta">
+        <h3>El riesgo está en personas, no en procesos</h3>
+        <p><b>66 de 141 operaciones dependen de una sola persona</b> — el 52.7% de los
+        envíos. Si esa persona falta, media división deja de reportar.</p>
+      </div>
+    </div>
+
+    <div class="destacado">
+      <p class="frase">Y hay una fecha de caducidad: los indicadores dejan de pedirse a mano
+      conforme los sistemas de origen los toman.</p>
+    </div>
+
+    <div class="apagado">
+      <div class="fila"><span class="num" style="font-weight:600">Semana 14</span>
+        <span class="pista-barra"><i style="width:40.3%"></i></span>
+        <span class="num chico"><b style="color:hsl(var(--foreground))">1,008</b> envíos</span></div>
+      <div class="fila"><span class="num" style="font-weight:600">Semana 20</span>
+        <span class="pista-barra"><i style="width:27.2%"></i></span>
+        <span class="num chico"><b style="color:hsl(var(--foreground))">680</b> envíos</span></div>
+      <div class="fila"><span class="num" style="font-weight:600">Semana 40</span>
+        <span class="pista-barra"><i style="width:10.9%"></i></span>
+        <span class="num chico"><b style="color:hsl(var(--foreground))">272</b> envíos</span></div>
+      <div class="fila"><span class="num" style="font-weight:600">Semana 42</span>
+        <span class="pista-barra"><i style="width:21.7%"></i></span>
+        <span class="num chico"><b style="color:hsl(var(--foreground))">544</b> envíos</span></div>
+    </div>
+    <p class="chico" style="margin-top:.85rem">Los 2,504 envíos por periodo sobre operación
+    activa, y la semana en que cada bloque pasa al WMS, a Talentrax, a Salesforce o al
+    sistema de SSMA.</p>
+
+    <div class="destacado aviso">
+      <p><b>Cuando el WMS tome estos indicadores, alguien va a preguntar si los tomó bien.</b>
+      La plataforma es la única evidencia que va a existir de con qué calidad se sostuvo la
+      captura manual. Ese registro no se reconstruye después.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 02 -->
+<section id="solucion">
+  <div class="env">
+    <p class="rotulo">02 · La solución</p>
+    <h2>Que el número entre una sola vez, con la regla puesta al escribirlo.</h2>
+
+    <div class="destacado">
+      <p class="frase">Una <b>persona</b> captura, para una o más <b>operaciones</b>, los
+      <b>indicadores</b> que se le asignaron, en cada <b>periodo</b>, y cada envío queda
+      escrito en la <b>bitácora</b>.</p>
+    </div>
+
+    <div class="rejilla tres">
+      <div class="tarjeta"><h3>El envío esperado se escribe antes que el dato</h3>
+        <p>Es el denominador del porcentaje de entrega. Sin él siempre da 100% y no mide
+        nada.</p></div>
+      <div class="tarjeta"><h3>El resultado se calcula, nunca se captura</h3>
+        <p>Nadie teclea un porcentaje: se capturan los campos y la plataforma aplica la
+        fórmula. En la aplicación no existe el campo donde escribirlo.</p></div>
+      <div class="tarjeta"><h3>Nada se borra</h3>
+        <p>Corregir crea un envío nuevo que apunta al anterior. El anterior sigue
+        existiendo.</p></div>
+    </div>
+
+    <p class="entrada">Y el beneficio, medido sobre el prototipo: separar <b>a quién se le
+    pide</b> de <b>quién lo entrega</b> bajó la malla de asignación de 2,453 renglones a
+    133, y puso la concentración —726 envíos por semana en una persona— en una pantalla
+    donde se puede repartir.</p>
+
+    <div class="acciones">
+      <a class="boton" href="mvp.html">Ver la aplicación funcionando</a>
+      <span class="chico">Siete pantallas, 141 operaciones, las 239 reglas. Se puede tocar.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 03 -->
+<section id="agregacion">
+  <div class="env">
+    <p class="rotulo">03 · El argumento</p>
+    <h2>Por qué esto no es un Excel más grande.</h2>
+    <p class="entrada">
+      Tres operaciones reportan «Cumplimiento al plan de descarga». Para saber cómo va la
+      compañía hay que combinarlas — y ahí es donde una hoja de cálculo miente.
+      <b>Cambie los números.</b>
+    </p>
+
+    <div class="desliza">
+      <table>
+        <thead><tr>
+          <th>Operación</th>
+          <th class="der" style="width:150px">Descargas en tiempo</th>
+          <th class="der" style="width:150px">Descargas totales</th>
+          <th class="der">Su resultado</th>
+        </tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+
+    <div class="duelo">
+      <div class="malo"><b class="num" id="simple">—</b>
+        <small><b>Promedio simple</b> — sumar los porcentajes y dividir entre tres. Es lo que
+        hace una hoja de cálculo, y es incorrecto.</small></div>
+      <div class="bueno"><b class="num" id="ponderado">—</b>
+        <small><b>Ponderado</b> — sumar los campos capturados y volver a aplicar la fórmula.
+        Se puede porque el resultado se calcula y nunca se captura.</small></div>
+    </div>
+
+    <p class="chico" id="explica" style="margin-top:.9rem"></p>
+
+    <div class="destacado aviso">
+      <p><b>Es un error que no se nota, porque el número siempre parece razonable.</b> Una
+      operación con 100 unidades y otra con 10,000 no pesan lo mismo, pero el promedio simple
+      las trata igual. La diferencia decide si un director cree que su compañía va bien.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 04 -->
+<section id="plan">
+  <div class="env">
+    <p class="rotulo">04 · La ejecución</p>
+    <h2>Cinco personas, doce semanas.</h2>
+    <p class="entrada">El prototipo corre: backend con las 239 reglas cargadas y <b>67
+    pruebas en verde</b>, y siete pantallas navegables. Lo que falta es ingeniería conocida y
+    medida.</p>
+
+    <div class="desliza">
+      <table>
+        <thead><tr><th style="width:5.5rem">Semanas</th><th>Hito</th><th>Qué queda hecho</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><b>Arranque</b></td><td>Entornos, integración continua en verde, y la sesión de firma de fórmulas agendada</td></tr>
+          <tr><td class="num">2–4</td><td><b>La API alcanza al modelo</b></td><td>Un administrador crea una división completa contra el servidor sin salir de la pantalla</td></tr>
+          <tr><td class="num">5–7</td><td><b>La captura es de verdad</b></td><td>Se entra con un enlace por correo, se captura, y queda en la bitácora con nombre y hora</td></tr>
+          <tr><td class="num">8–10</td><td><b>Coordinación y analíticos</b></td><td>El universo real —2,504 envíos por periodo— responde en menos de dos segundos</td></tr>
+          <tr><td class="num">11–12</td><td><b>Piloto</b></td><td>Un periodo completo capturado sin Excel de por medio</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rejilla tres">
+      <div class="tarjeta"><h3>Backend · 2</h3><p>~22 endpoints nuevos, la agregación ponderada en el servidor, y las pruebas de cada uno.</p></div>
+      <div class="tarjeta"><h3>Frontend · 2</h3><p>7,868 líneas ya escritas que hay que reconectar, y siete archivos de demostración que se borran.</p></div>
+      <div class="tarjeta"><h3>DevOps · 1</h3><p>Arranca de cero: no hay imágenes, ni integración continua, ni despliegue, ni correo real.</p></div>
+    </div>
+
+    <div class="destacado aviso">
+      <p><b>Dos compuertas que no son de ingeniería y pueden detener el piloto con todo el
+      código terminado:</b> la firma de las 23 fórmulas —L12 es la urgente— y la malla real de
+      asignación. Se agendan la primera semana, no la última.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 05 -->
+<section id="huecos">
+  <div class="env">
+    <p class="rotulo">05 · Los huecos</p>
+    <h2>Lo que no sabemos, dicho aquí.</h2>
+    <p class="entrada">Esta sección está en la presentación a propósito. La quinta regla del
+    proyecto es <b>publicar el hueco en vez de rellenarlo</b>: un dato inventado para que la
+    pantalla —o la diapositiva— se vea completa es peor que el vacío.</p>
+
+    <div class="desliza">
+      <table>
+        <thead><tr><th>Hueco</th><th class="der" style="width:7rem">Cuántos</th><th>Quién lo cierra</th></tr></thead>
+        <tbody>
+          <tr><td>Correo de escalación en nulo</td><td class="der num">141 de 141</td><td>Dirección de Logística</td></tr>
+          <tr><td>Operaciones sin sistema declarado</td><td class="der num">90 de 141</td><td>Tecnología</td></tr>
+          <tr><td>Operaciones sin clase asignada</td><td class="der num">141 de 141</td><td>El administrador, por lote</td></tr>
+          <tr><td>Operaciones sin contacto de TI</td><td class="der num">48</td><td>Tecnología</td></tr>
+          <tr><td>Envíos que no tienen a quién pedírsele</td><td class="der num">73</td><td>Se cierra con la malla real</td></tr>
+          <tr><td>Operaciones sin quien capture</td><td class="der num">5</td><td>Dirección de Logística</td></tr>
+          <tr><td><b>Las 23 fórmulas, sin firmar</b></td><td class="der num">23</td><td>Dirección de Logística y Tecnología</td></tr>
+          <tr><td><b>El año de las semanas de apagado</b></td><td class="der">—</td><td>Tecnología</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="entrada">Ninguno bloquea la construcción. Todos se muestran abiertos en la
+    pantalla de administración, en naranja y nunca en gris: <b>un hueco que no se ve no se
+    cierra</b>.</p>
+
+    <div class="destacado">
+      <p class="frase">Las 2,577 cifras se van a seguir pidiendo, con plataforma o sin ella,
+      hasta que los sistemas de origen las tomen. La pregunta no es si se capturan: es si al
+      terminar queda un registro de con qué calidad se capturaron, o un archivo de correos.</p>
+    </div>
+
+    <div class="acciones">
+      <a class="boton" href="mvp.html">Abrir la aplicación</a>
+      <a class="boton borde" href="LEEME.md">El paquete de entrega</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="env">
+    <p><b>CoreTX Captura</b> — división Logística de TRAXION · CoreTX Intelligence.
+    Toda cifra sale de <code>semilla/*.json</code> o de una medición sobre el prototipo.</p>
+    <p style="margin-top:.6rem">Un archivo, sin dependencias y sin peticiones a la red. Se
+    regenera con <code>python3 team/herramientas/generar_presentacion.py</code>. La
+    aplicación navegable es <code>mvp.html</code>; el paquete completo está en
+    <code>team/</code>.</p>
+  </div>
+</footer>
+
+<script>
+"use strict";
+const OPERACIONES = [{"id":"S013","nombre":"Aucma Querétaro, CEN","numerador":99,"base":100},{"id":"S011","nombre":"Colgate Querétaro, CEN","numerador":5000,"base":10000},{"id":"S012","nombre":"Colgate Tultitlán, CEN","numerador":480,"base":500}];
+const pct = x => (x * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 }) + "%";
+
+function construir() {
+  document.getElementById("cuerpo").innerHTML = OPERACIONES.map((o, i) =>
+    "<tr><td><b>" + o.id + '</b><br><span class="chico">' + o.nombre + "</span></td>"
+    + '<td class="der"><input type="number" min="0" data-fila="' + i + '" data-parte="numerador" value="' + o.numerador + '"></td>'
+    + '<td class="der"><input type="number" min="0" data-fila="' + i + '" data-parte="base" value="' + o.base + '"></td>'
+    + '<td class="der"><span id="r' + i + '">—</span></td></tr>').join("");
+
+  document.getElementById("cuerpo").addEventListener("input", e => {
+    if (e.target.tagName !== "INPUT") return;
+    OPERACIONES[Number(e.target.dataset.fila)][e.target.dataset.parte] =
+      Math.max(0, Number(e.target.value) || 0);
+    refrescar();
+  });
+  refrescar();
+}
+
+function refrescar() {
+  const propios = [];
+  let numerador = 0, base = 0;
+
+  OPERACIONES.forEach((o, i) => {
+    const vale = o.base > 0 ? o.numerador / o.base : null;
+    document.getElementById("r" + i).textContent = vale === null ? "—" : pct(vale);
+    if (vale !== null) propios.push(vale);
+    numerador += o.numerador; base += o.base;
+  });
+
+  const simple = propios.length ? propios.reduce((a, b) => a + b, 0) / propios.length : null;
+  // Ponderada: se suman los campos y se vuelve a aplicar la fórmula. Nunca se promedian
+  // porcentajes — es el error que este bloque existe para enseñar.
+  const ponderada = base > 0 ? numerador / base : null;
+
+  document.getElementById("simple").textContent = simple === null ? "—" : pct(simple);
+  document.getElementById("ponderado").textContent = ponderada === null ? "—" : pct(ponderada);
+
+  const nota = document.getElementById("explica");
+  if (simple === null || ponderada === null) { nota.textContent = ""; return; }
+  const brecha = Math.abs(simple - ponderada) * 100;
+  nota.innerHTML = brecha < 0.05
+    ? "Con bases parecidas los dos coinciden — <b>por eso el error es tan difícil de ver</b>. Suba la base de una operación y mire cómo se separan."
+    : "Se separan <b>" + brecha.toLocaleString("es-MX", { maximumFractionDigits: 1 })
+      + " puntos porcentuales</b> sobre " + base.toLocaleString("es-MX")
+      + " descargas. El ponderado es el número verdadero.";
+}
+
+construir();
+
+const enlaces = [...document.querySelectorAll("nav a")];
+const observador = new IntersectionObserver(entradas => {
+  for (const e of entradas) {
+    if (!e.isIntersecting) continue;
+    enlaces.forEach(a => a.classList.toggle("activa", a.getAttribute("href") === "#" + e.target.id));
+  }
+}, { rootMargin: "-20% 0px -70% 0px" });
+document.querySelectorAll("section[id]").forEach(s => observador.observe(s));
+</script>
+</body>
+</html>

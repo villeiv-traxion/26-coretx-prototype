@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoreTX MDM — la consola del maestro</title>
+<style>/* Los tokens del design system de Traxion, copiados de
+   node_modules/@traxion-global/design-system/dist/theme.css.
+
+   Se copian en vez de importarse porque el paquete es privado y este archivo no pide nada a
+   la red. Si el design system cambia sus tokens, esto se queda atrás — es un corte con
+   fecha, y lo dice en el pie. */
+:root{
+  --background:0 0% 100%; --foreground:0 0% 10%;
+  --card:0 0% 100%;
+  --primary:64 100% 44%; --primary-light:62 80% 56%; --primary-dark:63 100% 37%;
+  --primary-foreground:214 3% 25%;
+  --secondary:214 3% 40%; --secondary-light:60 2% 81%; --secondary-medium:210 2% 60%;
+  --muted:0 0% 96.1%; --muted-foreground:0 0% 45.1%;
+  --destructive:3 55.8% 51.2%; --destructive-warm:12 100% 56.7%;
+  --border:0 0% 89.8%; --ring:65 100% 41%;
+  --radius:.5rem;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:hsl(var(--background)); color:hsl(var(--foreground));
+  font-family:Roboto,"Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0; line-height:1.25; font-weight:600; letter-spacing:-.01em}
+h1{font-size:1.5rem} h2{font-size:1.0625rem} h3{font-size:.9375rem}
+p{margin:0}
+a{color:inherit; text-decoration:none}
+.num{font-variant-numeric:tabular-nums}
+.apagado{color:hsl(var(--muted-foreground))}
+.chico{font-size:.8125rem}
+.fuerte{font-weight:600}
+.trunca{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+/* ------------------------------------------------------------------ armazón */
+.marco{display:flex; flex-direction:column; min-height:100%}
+.cabecera{
+  position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:1rem;
+  height:3.25rem; padding:0 1rem; background:hsl(var(--background));
+  border-bottom:1px solid hsl(var(--border));
+}
+.marca{display:flex; align-items:center; gap:.55rem; font-weight:700; letter-spacing:-.02em; white-space:nowrap}
+.marca svg{color:hsl(var(--primary-dark))}
+.etiqueta{
+  padding:.1rem .5rem; border:1px solid hsl(var(--border)); border-radius:99px;
+  font-size:.6875rem; font-weight:500; color:hsl(var(--muted-foreground));
+}
+.cabecera .relleno{flex:1}
+.usuario{
+  display:flex; align-items:center; gap:.6rem; padding:.3rem .5rem .3rem .35rem;
+  border:1px solid hsl(var(--border)); border-radius:99px; cursor:pointer; background:none;
+  font:inherit; color:inherit;
+}
+.usuario:hover{background:hsl(var(--muted))}
+.avatar{
+  width:1.75rem; height:1.75rem; border-radius:99px; background:hsl(var(--primary));
+  color:hsl(var(--primary-foreground)); display:grid; place-items:center;
+  font-size:.6875rem; font-weight:700;
+}
+.rol{
+  padding:.05rem .5rem; border-radius:99px; background:hsl(var(--primary)/.25);
+  color:hsl(var(--primary-foreground)); font-size:.625rem; font-weight:700; letter-spacing:.04em;
+}
+.cuerpo{display:flex; flex:1; min-height:0}
+.lateral{
+  width:14.5rem; flex-shrink:0; border-right:1px solid hsl(var(--border));
+  padding:1rem .75rem; display:flex; flex-direction:column; gap:.15rem;
+}
+.lateral a{
+  display:flex; align-items:center; gap:.6rem; padding:.6rem .75rem; border-radius:.375rem;
+  color:hsl(var(--muted-foreground)); font-weight:500;
+}
+.lateral a:hover{background:hsl(var(--muted)); color:hsl(var(--foreground))}
+.lateral a.activa{background:hsl(var(--secondary)); color:#fff}
+.lateral .nota{margin-top:auto; padding:.75rem; font-size:.75rem; color:hsl(var(--muted-foreground)); border-top:1px solid hsl(var(--border))}
+.pagina{flex:1; min-width:0; padding:1.5rem 1.75rem 4rem}
+.pagina > * + *{margin-top:1.5rem}
+@media(max-width:860px){
+  .lateral{display:none}
+  .pagina{padding:1rem}
+  .lateral.abierta{
+    display:flex; position:fixed; inset:3.25rem auto 0 0; z-index:40;
+    background:hsl(var(--background)); box-shadow:0 0 0 100vmax hsl(0 0% 0%/.3);
+  }
+}
+.menu-movil{display:none; background:none; border:none; cursor:pointer; color:inherit; padding:.25rem}
+@media(max-width:860px){ .menu-movil{display:block} }
+
+/* ------------------------------------------------------------------ bloques */
+.respuesta{
+  border-top:1px solid hsl(var(--border)); border-bottom:1px solid hsl(var(--border));
+  padding:1rem 0; font-size:1.0625rem; line-height:1.45;
+}
+.seccion > .titulo{
+  display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
+  gap:.75rem; margin-bottom:.75rem;
+}
+.rejilla{display:grid; gap:1rem}
+.rejilla.dos{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.tarjeta{border:1px solid hsl(var(--border)); border-radius:var(--radius); padding:1rem 1.25rem}
+.vacio{
+  border:1px dashed hsl(var(--border)); border-radius:var(--radius);
+  padding:2.5rem 1.5rem; text-align:center;
+}
+.vacio h3{margin-bottom:.35rem}
+.aviso{
+  border-left:3px solid hsl(var(--destructive-warm)); background:hsl(var(--destructive-warm)/.08);
+  padding:.85rem 1.1rem; border-radius:0 .375rem .375rem 0; font-size:.875rem;
+}
+.filtros{display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.campo{display:flex; flex-direction:column; gap:.3rem}
+label{font-size:.8125rem; font-weight:500}
+
+/* ------------------------------------------------------------------ controles */
+input,select,button{font:inherit; color:inherit}
+input[type=text],input[type=number],select{
+  width:100%; padding:.45rem .6rem; border:1px solid hsl(var(--border)); border-radius:.375rem;
+  background:hsl(var(--background)); font-size:.875rem;
+}
+input[type=number]{font-variant-numeric:tabular-nums; min-width:5.5rem}
+input:focus,select:focus{outline:2px solid hsl(var(--ring)); outline-offset:-1px}
+input[aria-invalid=true]{border-color:hsl(var(--destructive)); background:hsl(var(--destructive)/.05)}
+.boton{
+  display:inline-flex; align-items:center; gap:.4rem; justify-content:center;
+  padding:.5rem 1rem; border-radius:.375rem; border:1px solid transparent; cursor:pointer;
+  font-size:.875rem; font-weight:600; background:hsl(var(--primary)); color:hsl(var(--primary-foreground));
+  white-space:nowrap;
+}
+.boton:hover{background:hsl(var(--primary-dark)); color:#fff}
+.boton.borde{background:none; border-color:hsl(var(--border)); font-weight:500}
+.boton.borde:hover{background:hsl(var(--muted)); color:inherit}
+.boton.plano{background:none; border-color:transparent; color:hsl(var(--secondary)); padding:.35rem .5rem; font-weight:500}
+.boton.plano:hover{background:hsl(var(--muted)); color:inherit}
+.boton.chico{padding:.3rem .65rem; font-size:.8125rem}
+.boton:disabled{opacity:.45; cursor:not-allowed}
+.boton.peligro{background:none; border-color:hsl(var(--destructive)/.4); color:hsl(var(--destructive))}
+.boton.peligro:hover{background:hsl(var(--destructive)/.08); color:hsl(var(--destructive))}
+
+/* ------------------------------------------------------------------ tablas */
+.desliza{overflow-x:auto; border:1px solid hsl(var(--border)); border-radius:var(--radius)}
+table{border-collapse:collapse; width:100%; font-size:.875rem}
+th,td{text-align:left; padding:.6rem .8rem; border-bottom:1px solid hsl(var(--border)); vertical-align:middle}
+th{
+  font-size:.6875rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:hsl(var(--muted-foreground)); white-space:nowrap; background:hsl(var(--muted)/.6);
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:hsl(var(--muted)/.5)}
+td.der,th.der{text-align:right}
+td.cen,th.cen{text-align:center}
+.pegada{position:sticky; left:0; background:hsl(var(--background))}
+tr:hover .pegada{background:hsl(var(--muted)/.5)}
+
+/* ------------------------------------------------------------------ señales */
+.insignia{display:inline-block; padding:.12rem .55rem; border-radius:99px; font-size:.75rem; font-weight:600; white-space:nowrap}
+.i-completa{background:hsl(var(--primary)/.25); color:hsl(var(--primary-foreground))}
+.i-casi{color:hsl(var(--muted-foreground))}
+.i-parcial{background:hsl(var(--destructive-warm)/.15); color:hsl(var(--destructive-warm))}
+.i-nada{background:hsl(var(--destructive)/.13); color:hsl(var(--destructive))}
+.i-gris{background:hsl(var(--muted)); color:hsl(var(--muted-foreground))}
+.i-azul{background:hsl(var(--secondary)/.12); color:hsl(var(--secondary))}
+.marca-sem{
+  display:inline-flex; align-items:center; justify-content:center; width:2.4rem; height:1.6rem;
+  border-radius:.25rem; font-size:.6875rem; font-variant-numeric:tabular-nums;
+}
+.barra{height:7px; background:hsl(var(--muted)); border-radius:99px; overflow:hidden; min-width:6rem}
+.barra i{display:block; height:100%; background:hsl(var(--primary-dark)); border-radius:99px}
+.reloj{display:inline-flex; align-items:center; gap:.35rem; font-size:.8125rem; white-space:nowrap}
+.urgente{color:hsl(var(--destructive))}
+.pronto{color:hsl(var(--destructive-warm))}
+.error{display:block; color:hsl(var(--destructive)); font-size:.75rem; margin-top:.25rem; max-width:26rem; line-height:1.35}
+.escala{color:hsl(var(--destructive-warm))}
+
+/* ------------------------------------------------------------------ matriz */
+.bloque{border:1px solid hsl(var(--border)); border-radius:var(--radius); overflow:hidden}
+.bloque > .barra-titulo{
+  display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; justify-content:space-between;
+  padding:.75rem 1rem; background:hsl(var(--muted)/.6); border-bottom:1px solid hsl(var(--border));
+}
+.bloque .pie{
+  display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; justify-content:space-between;
+  padding:.85rem 1rem; border-top:1px solid hsl(var(--border));
+}
+.resultado{font-weight:600; font-variant-numeric:tabular-nums}
+.resultado.sin{color:hsl(var(--muted-foreground)); font-weight:400}
+.veredicto{padding:.85rem 1rem; border-top:1px solid hsl(var(--border)); font-size:.875rem}
+.veredicto.ok{background:hsl(var(--primary)/.12)}
+.veredicto.mal{background:hsl(var(--destructive)/.07)}
+.veredicto.retiene{background:hsl(var(--destructive-warm)/.1)}
+details{border:1px solid hsl(var(--border)); border-radius:var(--radius)}
+summary{padding:.75rem 1rem; cursor:pointer; font-weight:500; font-size:.875rem}
+summary:hover{background:hsl(var(--muted)/.5)}
+details[open] summary{border-bottom:1px solid hsl(var(--border))}
+
+/* ------------------------------------------------------------------ pestañas */
+.pestanas{display:flex; gap:.25rem; overflow-x:auto; border-bottom:1px solid hsl(var(--border))}
+.pestanas button{
+  background:none; border:none; border-bottom:2px solid transparent; cursor:pointer;
+  padding:.6rem .85rem; font-size:.875rem; font-weight:500; color:hsl(var(--muted-foreground));
+  white-space:nowrap;
+}
+.pestanas button:hover{color:hsl(var(--foreground))}
+.pestanas button.activa{color:hsl(var(--foreground)); border-bottom-color:hsl(var(--primary))}
+
+/* ------------------------------------------------------------------ gráfica */
+.grafica{width:100%; height:230px}
+.grafica .eje{stroke:hsl(var(--border))}
+.grafica .linea{fill:none; stroke:hsl(var(--primary-dark)); stroke-width:2}
+.grafica .punto{fill:hsl(var(--primary-dark))}
+.grafica text{font-size:10px; fill:hsl(var(--muted-foreground))}
+.duelo{display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.duelo b{display:block; font-size:1.75rem; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+
+/* ------------------------------------------------------------------ MDM: el árbol */
+.arbol{list-style:none; margin:0; padding:0}
+.arbol ul{list-style:none; margin:0; padding-left:1.4rem; border-left:1px solid hsl(var(--border))}
+.nodo{display:flex; align-items:center; gap:.5rem; padding:.45rem .5rem; border-radius:.375rem; cursor:pointer; flex-wrap:wrap}
+.nodo:hover{background:hsl(var(--muted)/.6)}
+.nodo .flecha{width:1rem; text-align:center; color:hsl(var(--muted-foreground)); flex-shrink:0; transition:transform .12s}
+.nodo.abierto .flecha{transform:rotate(90deg)}
+.nodo .conteo{margin-left:auto; display:flex; gap:.4rem; align-items:center}
+.hoja{display:flex; align-items:center; gap:.5rem; padding:.3rem .5rem .3rem 1.5rem; flex-wrap:wrap}
+.hoja:hover{background:hsl(var(--muted)/.4)}
+
+/* MDM: tarjetas del tablero de calidad */
+.calidad{display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.hueco-tarjeta{border:1px solid hsl(var(--border)); border-left:3px solid hsl(var(--destructive-warm)); border-radius:var(--radius); padding:1rem 1.15rem; cursor:pointer; background:none; text-align:left; font:inherit; color:inherit}
+.hueco-tarjeta:hover{background:hsl(var(--muted)/.5)}
+.hueco-tarjeta.cerrado{border-left-color:hsl(var(--primary))}
+.hueco-tarjeta b{display:block; font-size:1.75rem; font-weight:700; letter-spacing:-.03em; line-height:1.1; font-variant-numeric:tabular-nums}
+.hueco-tarjeta small{display:block; margin-top:.3rem; font-size:.8125rem; color:hsl(var(--muted-foreground)); line-height:1.35}
+.hueco-tarjeta .cierra{margin-top:.5rem; font-size:.6875rem; letter-spacing:.05em; text-transform:uppercase; color:hsl(var(--muted-foreground))}
+
+/* ------------------------------------------------------------------ MDM: el diagrama del modelo */
+.diagrama{border:1px solid hsl(var(--border)); border-radius:var(--radius); padding:.5rem; background:hsl(var(--muted)/.3)}
+.diagrama svg{width:100%; height:auto; display:block}
+.diagrama .caja{cursor:pointer}
+.diagrama .caja rect{fill:hsl(var(--background)); stroke:hsl(var(--border)); rx:8}
+.diagrama .caja:hover rect{stroke:hsl(var(--primary-dark)); stroke-width:2}
+.diagrama .caja.centro rect{fill:hsl(var(--primary)/.18); stroke:hsl(var(--primary-dark)); stroke-width:2}
+.diagrama .caja text{fill:hsl(var(--foreground))}
+.diagrama .caja .nombre{font-size:13px; font-weight:600}
+.diagrama .caja.centro .nombre{font-size:15px}
+.diagrama .caja .cuenta{font-size:18px; font-weight:700; letter-spacing:-.02em}
+.diagrama .caja .nota{font-size:9.5px; fill:hsl(var(--muted-foreground))}
+.diagrama .caja .nota.alerta{fill:hsl(var(--destructive-warm)); font-weight:600}
+.diagrama .flecha-linea{stroke:hsl(var(--secondary-medium)); stroke-width:1.5; fill:none; marker-end:url(#punta)}
+.diagrama .verbo{font-size:9.5px; fill:hsl(var(--muted-foreground)); font-style:italic}
+.diagrama-lista{display:none}
+@media(max-width:700px){
+  .diagrama svg{display:none}
+  .diagrama-lista{display:grid; gap:.5rem; padding:.5rem}
+}
+
+/* MDM: la cadena de una ficha */
+.cadena{list-style:none; margin:0; padding:0}
+.cadena > li{position:relative; padding:0 0 1.1rem 1.9rem}
+.cadena > li::before{ /* el punto */
+  content:""; position:absolute; left:.35rem; top:.45rem; width:.7rem; height:.7rem;
+  border-radius:99px; background:hsl(var(--primary)); border:2px solid hsl(var(--primary-dark));
+}
+.cadena > li::after{ /* la línea que conecta */
+  content:""; position:absolute; left:.65rem; top:1.3rem; bottom:-.1rem; width:2px;
+  background:hsl(var(--border));
+}
+.cadena > li:last-child::after{display:none}
+.cadena .eslabon{border:1px solid hsl(var(--border)); border-radius:var(--radius); padding:.85rem 1.1rem}
+.cadena .eslabon .rotulo-eslabon{
+  font-size:.6875rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:hsl(var(--muted-foreground)); margin-bottom:.35rem; display:flex; gap:.6rem; align-items:center;
+}
+.cadena .eslabon .rotulo-eslabon a{margin-left:auto; font-weight:500; text-transform:none; letter-spacing:0; color:hsl(var(--secondary))}
+.cadena .eslabon .rotulo-eslabon a:hover{text-decoration:underline}
+.fichitas{display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem}
+.fichita{
+  display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .6rem;
+  border:1px solid hsl(var(--border)); border-radius:.375rem; font-size:.8125rem;
+  text-decoration:none; background:hsl(var(--background));
+}
+a.fichita:hover{border-color:hsl(var(--primary-dark)); background:hsl(var(--muted)/.5)}
+.fichita b{font-weight:600}
+
+/* MDM: el mini-mapa contextual */
+.minimapa{display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:0 0 .25rem}
+.minimapa span{
+  padding:.2rem .6rem; border:1px solid hsl(var(--border)); border-radius:99px;
+  font-size:.6875rem; color:hsl(var(--muted-foreground)); background:hsl(var(--background));
+}
+.minimapa span.activo{
+  border-color:hsl(var(--primary-dark)); background:hsl(var(--primary)/.18);
+  color:hsl(var(--foreground)); font-weight:600;
+}
+.minimapa i{width:1rem; height:2px; background:hsl(var(--border)); flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<script>
+"use strict";
+// =====================================================================================
+//  CoreTX MDM — la consola del administrador del maestro de datos, en un solo archivo.
+//
+//  Corte del 2026-08-14. Cero peticiones a la red.
+//
+//  Los datos son el maestro derivado de la semilla (MDM/datos/maestro.json): 141
+//  operaciones reales, 87 clientes DERIVADOS de los nombres (por confirmar), 87 contratos
+//  EJEMPLO. Cada renglón lleva su origen, y lo que no se pudo derivar está contado como
+//  hueco — no adivinado.
+//
+//  Se regenera con:  node MDM/herramientas/generar_mvp_mdm.mjs
+// =====================================================================================
+
+const MAESTRO = {"generadoDe":"semilla/*.json","hoy":"2026-08-14","division":{"id":"DIV01","nombre":"Logística","origen":"SEMILLA","activa":true},"companias":[{"id":"CIA01","nombre":"Medistik","corporativo":"Medistik","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA02","nombre":"Pharma Gobierno","corporativo":"Pharma Gobierno","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA03","nombre":"RedPack","corporativo":"RedPack","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA04","nombre":"SID Logística Almacén","corporativo":"Contract Logistics","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA05","nombre":"Solistica CL (Contract Logistic)","corporativo":"Contract Logistics","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA06","nombre":"Solistica TM","corporativo":"Contract Logistics","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA07","nombre":"Traxporta","corporativo":"Traxporta Nacional","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA08","nombre":"Vmodal","corporativo":"VModal","divisionId":"DIV01","origen":"SEMILLA","activa":true},{"id":"CIA09","nombre":"eCommerce XB","corporativo":"eCommerce XB","divisionId":"DIV01","origen":"SEMILLA","activa":true}],"negocios":[{"id":"NG01","nombre":"Contract Logistics Health","clase":null,"origen":"DERIVADO"},{"id":"NG02","nombre":"eCommerce","clase":null,"origen":"DERIVADO"},{"id":"NG03","nombre":"Contract Logistics Consumo","clase":null,"origen":"DERIVADO"},{"id":"NG04","nombre":"Brokerage","clase":null,"origen":"DERIVADO"}],"territorios":[{"id":"TER01","nombre":"CEN","origen":"DERIVADO","operaciones":18},{"id":"TER02","nombre":"K & M","origen":"DERIVADO","operaciones":8},{"id":"TER03","nombre":"MET","origen":"DERIVADO","operaciones":20},{"id":"TER04","nombre":"NTE","origen":"DERIVADO","operaciones":9},{"id":"TER05","nombre":"OCC","origen":"DERIVADO","operaciones":11}],"operaciones":[{"id":"S155","nombre":"Coecillo","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S163","nombre":"Coecillo","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S156","nombre":"Doña Rosa","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S164","nombre":"Doña Rosa","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S157","nombre":"Guadalajara","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S165","nombre":"Guadalajara","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S158","nombre":"Lago","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S166","nombre":"Lago","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S159","nombre":"Monterrey","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S167","nombre":"Monterrey","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S160","nombre":"Ocoyoacac","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S168","nombre":"Ocoyoacac","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S161","nombre":"Tultitlán","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S169","nombre":"Tultitlán","companiaId":"CIA01","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Manhattan","activo":true,"contactoCaptura":"Gerardo Fajardo · y Paola Vanessa","contactoCapturaCorreo":"g.fajardod@traxion.global · p.velazquez@traxion.global","contactoTi":"Jonathan Albarran · y Francisco Rojas","escalaA":null},{"id":"S079","nombre":"Estado de México","companiaId":"CIA02","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Blueyonder, Sistema de farmacias y Superset","activo":true,"contactoCaptura":"Rene Morales · y Eduardo Lavalle","contactoCapturaCorreo":"rene.morales@gruposid.com.mx · eduardo.lavalle@gruposid.com.mx","contactoTi":"Valentino Morales Ávila · y Karla Vargas","escalaA":null},{"id":"S080","nombre":"IMSS Bienestar","companiaId":"CIA02","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Blueyonder y Superset","activo":true,"contactoCaptura":"Rene Morales · y Eduardo Lavalle","contactoCapturaCorreo":"rene.morales@gruposid.com.mx · eduardo.lavalle@gruposid.com.mx","contactoTi":"Valentino Morales Ávila · y Karla Vargas","escalaA":null},{"id":"S081","nombre":"IMSS Ordinario","companiaId":"CIA02","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Blueyonder y Superset","activo":true,"contactoCaptura":"Rene Morales · y Eduardo Lavalle","contactoCapturaCorreo":"rene.morales@gruposid.com.mx · eduardo.lavalle@gruposid.com.mx","contactoTi":"Valentino Morales Ávila · y Karla Vargas","escalaA":null},{"id":"S170","nombre":"ISSSTE","companiaId":"CIA02","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Blueyonder,Superset y Salesforce","activo":true,"contactoCaptura":"Rafael Gomez Ledesma · y Jose Oscar Vidal Barrera","contactoCapturaCorreo":"rafael.gomez.l@gruposid.com.mx · jose.vidal@gruposid.com.mx","contactoTi":"Valentino Morales Ávila · y Karla Vargas","escalaA":null},{"id":"S082","nombre":"Pisa","companiaId":"CIA02","negocioId":"NG01","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Rene Morales · y Eduardo Lavalle","contactoCapturaCorreo":"rene.morales@gruposid.com.mx · eduardo.lavalle@gruposid.com.mx","contactoTi":"Valentino Morales Ávila · y Karla Vargas","escalaA":null},{"id":"S084","nombre":"Direct Delivery","companiaId":"CIA03","negocioId":"NG02","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Redpack","activo":false,"contactoCaptura":null,"contactoCapturaCorreo":null,"contactoTi":"Armando Ramírez Ayala","escalaA":null},{"id":"S085","nombre":"Paquetería y mensajería","companiaId":"CIA03","negocioId":"NG02","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Redpack","activo":true,"contactoCaptura":"Salvador Moreno","contactoCapturaCorreo":"s.moreno@traxion.global","contactoTi":"Armando Ramírez Ayala · y David Mendoza","escalaA":null},{"id":"S020","nombre":"Agros de la Cuenca Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S013","nombre":"Aucma Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S078","nombre":"Barry Toluca, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Toluca","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S015","nombre":"Bridgestone Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S011","nombre":"Colgate Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S012","nombre":"Colgate Tultitlán, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Tultitlán","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S017","nombre":"FDF Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S048","nombre":"Garret Mexicali, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Mexicali","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S070","nombre":"Genomma Lab Toluca, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Toluca","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S069","nombre":"Henkel Toluca, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Toluca","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S064","nombre":"Henkel Zapopan, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Zapopan","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S052","nombre":"John Deere Ramos Arizpe, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Ramos Arizpe","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S053","nombre":"Kellanova Santa Catarina, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Santa Catarina","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S073","nombre":"Kellogg's Corregidora, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Corregidora","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S050","nombre":"Kellogg's Linares, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Linares","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S051","nombre":"Kellogg's Mexicali, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Mexicali","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S075","nombre":"Kellogg's Pronumex Toluca, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Toluca","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S074","nombre":"Kellogg's Querétaro, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S062","nombre":"Kraft In House Tlaquepaque, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Tlaquepaque","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S063","nombre":"Kraft MP Tlaquepaque, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Tlaquepaque","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S046","nombre":"Lala Nacional, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Nacional","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S040","nombre":"MC600 Tlalnepantla, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":null,"clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S016","nombre":"Maquilas Henkel Toluca, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Toluca","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S049","nombre":"Mars Monterrey, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Monterrey","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S071","nombre":"Mars Querétaro, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S072","nombre":"Mars Villahermosa, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Villahermosa","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S067","nombre":"Medistik Pisa Guadalajara, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Guadalajara","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S061","nombre":"Mondelez el Salto, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"el Salto","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S026","nombre":"Multicuentas Cuautitlán - Hisense, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Cuautitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S027","nombre":"Multicuentas Cuautitlán - Walmart, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Cuautitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S047","nombre":"Multicuentas Mexicali - Vmodal, GT Carriers, Cargo, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Multicuentas Mexicali","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S054","nombre":"Multicuentas Mexicali - Walmart Chihuahua, NTE","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER04","sitio":"Multicuentas Mexicali","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S021","nombre":"Multicuentas Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Multicuentas Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S038","nombre":"Multicuentas Tlalnepantla - Bekax, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tlalnepantla","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S039","nombre":"Multicuentas Tlalnepantla - HRB, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tlalnepantla","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S042","nombre":"Multicuentas Tlalnepantla - PINSA, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tlalnepantla","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S037","nombre":"Multicuentas Tlalnepantla - Rappi, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tlalnepantla","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S077","nombre":"Multicuentas Toluca - Henkel, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Multicuentas Toluca","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S029","nombre":"Multicuentas Tultitlán - Aluprint, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S034","nombre":"Multicuentas Tultitlán - Aura Frames, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S030","nombre":"Multicuentas Tultitlán - D'Gari, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S031","nombre":"Multicuentas Tultitlán - Henkel, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S032","nombre":"Multicuentas Tultitlán - MTB, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S033","nombre":"Multicuentas Tultitlán - Phillips, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S028","nombre":"Multicuentas Tultitlán - Pinsa, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Multicuentas Tultitlán","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S060","nombre":"Multicuentas el Salto - Carrier, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Multicuentas el Salto","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S058","nombre":"Multicuentas el Salto - Envases Universales, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Multicuentas el Salto","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S025","nombre":"Multicuentas el Salto - Kraft Heinz Externo, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Multicuentas el Salto","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S057","nombre":"Multicuentas el Salto - Kraft Heinz, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Multicuentas el Salto","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S059","nombre":"Multicuentas el Salto - Walmart, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Multicuentas el Salto","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S055","nombre":"Nuevos Negocios","companiaId":"CIA04","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":false,"contactoCaptura":null,"contactoCapturaCorreo":null,"contactoTi":null,"escalaA":null},{"id":"S041","nombre":"PPG Tlalnepantla, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Tlalnepantla","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S036","nombre":"Palacio de Hierro Tultitlán, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Tultitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S019","nombre":"Pennsylvania Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S076","nombre":"Pringles Querétaro, K & M","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER02","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S045","nombre":"SDS Samsung Cuautitlán, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Cuautitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S018","nombre":"SYD Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S035","nombre":"Samsung Cuautitlán, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Cuautitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S022","nombre":"Samsung PIQ Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S023","nombre":"Samsung Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S066","nombre":"Sanmina Tlajomulco, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":"Tlajomulco","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S065","nombre":"Terminal Tlajomulco, OCC","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER05","sitio":null,"clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S044","nombre":"Totalplay Nacional, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Nacional","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S010","nombre":"UPL Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S014","nombre":"Volkswagen Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Izel","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":"Ernesto Miranda Rivera","escalaA":null},{"id":"S043","nombre":"Walmart IT Cuautitlán, MET","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER03","sitio":"Cuautitlán","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S024","nombre":"Yokohama Querétaro, CEN","companiaId":"CIA04","negocioId":"NG03","territorioId":"TER01","sitio":"Querétaro","clase":null,"sistemaDeclarado":"Sistema independinete","activo":true,"contactoCaptura":"Héctor Beltrán Aguilar","contactoCapturaCorreo":"h.beltran@traxion.global","contactoTi":null,"escalaA":null},{"id":"S090","nombre":"Amway","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S114","nombre":"BDF","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S091","nombre":"BFTM","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S094","nombre":"BFTM","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S100","nombre":"BFTM","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S105","nombre":"BFTM","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S108","nombre":"BFTM","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S149","nombre":"Backoffice","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S134","nombre":"Biopas","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S111","nombre":"Colgate","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S113","nombre":"Crown","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S145","nombre":"Filorga","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S115","nombre":"Fuller","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S124","nombre":"GSEB","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S127","nombre":"GSEB","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S122","nombre":"Grupo BIA","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S117","nombre":"HR Brands","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S116","nombre":"Helen of Troy","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S128","nombre":"Hill's","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S135","nombre":"Kenvue","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S123","nombre":"Kerry","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S097","nombre":"Mars","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S146","nombre":"Moët","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S148","nombre":"Nuevos Negocios","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S144","nombre":"Overnia","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S139","nombre":"Pedro Domecq","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S136","nombre":"Perfetti","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S140","nombre":"Pierre Fabre","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S120","nombre":"RB","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S125","nombre":"RB","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S092","nombre":"Red Bull","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S098","nombre":"Red Bull","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S141","nombre":"Red Bull","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S118","nombre":"Richemont","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S130","nombre":"Singer","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S129","nombre":"Solenis","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S137","nombre":"Sunstar","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S102","nombre":"Tecnolite","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S142","nombre":"Wonderful","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S131","nombre":"Zuko","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S132","nombre":"Zuko","companiaId":"CIA05","negocioId":"NG03","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":true,"contactoCaptura":"Christian Ivan Reyes","contactoCapturaCorreo":"christian.reyes@solistica.com","contactoTi":"Gerardo Miranda","escalaA":null},{"id":"S009","nombre":"SID Logística Distribución","companiaId":"CIA06","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Solistica One","activo":true,"contactoCaptura":"Barbara Paulina Peña","contactoCapturaCorreo":"barbara.pena@solistica.com","contactoTi":"Jesus Omar Mendez","escalaA":null},{"id":"S005","nombre":"Solistica Nacional","companiaId":"CIA06","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Solistica One","activo":true,"contactoCaptura":"Barbara Paulina Peña","contactoCapturaCorreo":"barbara.pena@solistica.com","contactoTi":"Jesus Omar Mendez","escalaA":null},{"id":"S006","nombre":"Traxporta Dedicados","companiaId":"CIA06","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Solistica One","activo":true,"contactoCaptura":"Barbara Paulina Peña","contactoCapturaCorreo":"barbara.pena@solistica.com","contactoTi":"Jesus Omar Mendez","escalaA":null},{"id":"S008","nombre":"Traxporta Gobierno","companiaId":"CIA06","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Solistica One","activo":true,"contactoCaptura":"Barbara Paulina Peña","contactoCapturaCorreo":"barbara.pena@solistica.com","contactoTi":"Jesus Omar Mendez","escalaA":null},{"id":"S007","nombre":"Traxporta Nacional","companiaId":"CIA06","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Solistica One","activo":true,"contactoCaptura":"Barbara Paulina Peña","contactoCapturaCorreo":"barbara.pena@solistica.com","contactoTi":"Jesus Omar Mendez","escalaA":null},{"id":"S086","nombre":"Oficina USA","companiaId":"CIA07","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":false,"contactoCaptura":null,"contactoCapturaCorreo":null,"contactoTi":null,"escalaA":null},{"id":"S087","nombre":"Solistica TM - XB","companiaId":"CIA07","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":false,"contactoCaptura":null,"contactoCapturaCorreo":null,"contactoTi":null,"escalaA":null},{"id":"S088","nombre":"XB","companiaId":"CIA07","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":null,"activo":false,"contactoCaptura":null,"contactoCapturaCorreo":null,"contactoTi":null,"escalaA":null},{"id":"S002","nombre":"Carga General","companiaId":"CIA08","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Bitacora Vmodal","activo":true,"contactoCaptura":"Adrian Guzman Cano","contactoCapturaCorreo":"a.guzmanc@traxion.global","contactoTi":"Cesar Obey Ament Avila","escalaA":null},{"id":"S003","nombre":"Carretero (rueda de hule)","companiaId":"CIA08","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Bitacora Vmodal","activo":true,"contactoCaptura":"Adrian Guzman Cano","contactoCapturaCorreo":"a.guzmanc@traxion.global","contactoTi":"Cesar Obey Ament Avila","escalaA":null},{"id":"S004","nombre":"Intermodal (rueda de hierro)","companiaId":"CIA08","negocioId":"NG04","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"Bitacora Vmodal","activo":true,"contactoCaptura":"Adrian Guzman Cano","contactoCapturaCorreo":"a.guzmanc@traxion.global","contactoTi":"Cesar Obey Ament Avila","escalaA":null},{"id":"S083","nombre":"Laredo","companiaId":"CIA09","negocioId":"NG02","territorioId":null,"sitio":null,"clase":null,"sistemaDeclarado":"CODEX","activo":true,"contactoCaptura":"Oswaldo Juárez Rodriguez","contactoCapturaCorreo":"o.juarez@traxion.global","contactoTi":"Armando Ramírez Ayala","escalaA":null}],"clientes":[{"id":"CL001","nombre":"Agros de la Cuenca","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S020"]},{"id":"CL002","nombre":"Aluprint","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S029"]},{"id":"CL003","nombre":"Amway","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S090"]},{"id":"CL004","nombre":"Aucma","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S013"]},{"id":"CL005","nombre":"Aura Frames","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S034"]},{"id":"CL006","nombre":"BDF","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S114"]},{"id":"CL007","nombre":"BFTM","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S091","S094","S100","S105","S108"]},{"id":"CL008","nombre":"Barry","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S078"]},{"id":"CL009","nombre":"Bekax","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S038"]},{"id":"CL010","nombre":"Biopas","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S134"]},{"id":"CL011","nombre":"Bridgestone","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S015"]},{"id":"CL012","nombre":"Cargo","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S047"]},{"id":"CL013","nombre":"Carrier","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S060"]},{"id":"CL014","nombre":"Colgate","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S011","S012","S111"]},{"id":"CL015","nombre":"Crown","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S113"]},{"id":"CL016","nombre":"D'Gari","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S030"]},{"id":"CL017","nombre":"Envases Universales","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S058"]},{"id":"CL018","nombre":"Estado de México","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S079"]},{"id":"CL019","nombre":"FDF","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S017"]},{"id":"CL020","nombre":"Filorga","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S145"]},{"id":"CL021","nombre":"Fuller","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S115"]},{"id":"CL022","nombre":"GSEB","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S124","S127"]},{"id":"CL023","nombre":"GT Carriers","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S047"]},{"id":"CL024","nombre":"Garret","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S048"]},{"id":"CL025","nombre":"Genomma Lab","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S070"]},{"id":"CL026","nombre":"Grupo BIA","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S122"]},{"id":"CL027","nombre":"HR Brands","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S117"]},{"id":"CL028","nombre":"HRB","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S039"]},{"id":"CL029","nombre":"Helen of Troy","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S116"]},{"id":"CL030","nombre":"Henkel","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S069","S064","S077","S031"]},{"id":"CL031","nombre":"Hill's","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S128"]},{"id":"CL032","nombre":"Hisense","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S026"]},{"id":"CL033","nombre":"IMSS Bienestar","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S080"]},{"id":"CL034","nombre":"IMSS Ordinario","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S081"]},{"id":"CL035","nombre":"ISSSTE","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S170"]},{"id":"CL036","nombre":"John Deere","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S052"]},{"id":"CL037","nombre":"Kellanova","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S053"]},{"id":"CL038","nombre":"Kellogg's","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S073","S050","S051","S074"]},{"id":"CL039","nombre":"Kellogg's Pronumex","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S075"]},{"id":"CL040","nombre":"Kenvue","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S135"]},{"id":"CL041","nombre":"Kerry","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S123"]},{"id":"CL042","nombre":"Kraft Heinz","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S057"]},{"id":"CL043","nombre":"Kraft Heinz Externo","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S025"]},{"id":"CL044","nombre":"Kraft In House","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S062"]},{"id":"CL045","nombre":"Kraft MP","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S063"]},{"id":"CL046","nombre":"Lala","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S046"]},{"id":"CL047","nombre":"MTB","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S032"]},{"id":"CL048","nombre":"Maquilas Henkel","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S016"]},{"id":"CL049","nombre":"Mars","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S049","S071","S072","S097"]},{"id":"CL050","nombre":"Medistik Pisa","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S067"]},{"id":"CL051","nombre":"Mondelez","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S061"]},{"id":"CL052","nombre":"Moët","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S146"]},{"id":"CL053","nombre":"Overnia","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S144"]},{"id":"CL054","nombre":"PINSA","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S042"]},{"id":"CL055","nombre":"PPG","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S041"]},{"id":"CL056","nombre":"Palacio de Hierro","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S036"]},{"id":"CL057","nombre":"Pedro Domecq","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S139"]},{"id":"CL058","nombre":"Pennsylvania","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S019"]},{"id":"CL059","nombre":"Perfetti","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S136"]},{"id":"CL060","nombre":"Phillips","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S033"]},{"id":"CL061","nombre":"Pierre Fabre","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S140"]},{"id":"CL062","nombre":"Pinsa","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S028"]},{"id":"CL063","nombre":"Pisa","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S082"]},{"id":"CL064","nombre":"Pringles","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S076"]},{"id":"CL065","nombre":"RB","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S120","S125"]},{"id":"CL066","nombre":"Rappi","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S037"]},{"id":"CL067","nombre":"Red Bull","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S092","S098","S141"]},{"id":"CL068","nombre":"Richemont","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S118"]},{"id":"CL069","nombre":"SDS Samsung","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S045"]},{"id":"CL070","nombre":"SYD","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S018"]},{"id":"CL071","nombre":"Samsung","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S035","S023"]},{"id":"CL072","nombre":"Samsung PIQ","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S022"]},{"id":"CL073","nombre":"Sanmina","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S066"]},{"id":"CL074","nombre":"Singer","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S130"]},{"id":"CL075","nombre":"Solenis","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S129"]},{"id":"CL076","nombre":"Sunstar","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S137"]},{"id":"CL077","nombre":"Tecnolite","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S102"]},{"id":"CL078","nombre":"Totalplay","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S044"]},{"id":"CL079","nombre":"UPL","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S010"]},{"id":"CL080","nombre":"Vmodal","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S047"]},{"id":"CL081","nombre":"Volkswagen","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S014"]},{"id":"CL082","nombre":"Walmart","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S027","S059"]},{"id":"CL083","nombre":"Walmart Chihuahua","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S054"]},{"id":"CL084","nombre":"Walmart IT","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S043"]},{"id":"CL085","nombre":"Wonderful","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S142"]},{"id":"CL086","nombre":"Yokohama","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S024"]},{"id":"CL087","nombre":"Zuko","estado":"POR_CONFIRMAR","origen":"DERIVADO","operaciones":["S131","S132"]}],"contratos":[{"id":"CT001","clienteId":"CL001","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S020"]},{"id":"CT002","clienteId":"CL002","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S029"]},{"id":"CT003","clienteId":"CL003","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S090"]},{"id":"CT004","clienteId":"CL004","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S013"]},{"id":"CT005","clienteId":"CL005","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S034"]},{"id":"CT006","clienteId":"CL006","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S114"]},{"id":"CT007","clienteId":"CL007","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S091","S094","S100","S105","S108"]},{"id":"CT008","clienteId":"CL008","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S078"]},{"id":"CT009","clienteId":"CL009","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S038"]},{"id":"CT010","clienteId":"CL010","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S134"]},{"id":"CT011","clienteId":"CL011","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S015"]},{"id":"CT012","clienteId":"CL012","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S047"]},{"id":"CT013","clienteId":"CL013","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S060"]},{"id":"CT014","clienteId":"CL014","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S011","S012","S111"]},{"id":"CT015","clienteId":"CL015","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S113"]},{"id":"CT016","clienteId":"CL016","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S030"]},{"id":"CT017","clienteId":"CL017","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S058"]},{"id":"CT018","clienteId":"CL018","companiaId":"CIA02","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S079"]},{"id":"CT019","clienteId":"CL019","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S017"]},{"id":"CT020","clienteId":"CL020","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S145"]},{"id":"CT021","clienteId":"CL021","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S115"]},{"id":"CT022","clienteId":"CL022","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S124","S127"]},{"id":"CT023","clienteId":"CL023","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S047"]},{"id":"CT024","clienteId":"CL024","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S048"]},{"id":"CT025","clienteId":"CL025","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S070"]},{"id":"CT026","clienteId":"CL026","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S122"]},{"id":"CT027","clienteId":"CL027","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S117"]},{"id":"CT028","clienteId":"CL028","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S039"]},{"id":"CT029","clienteId":"CL029","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S116"]},{"id":"CT030","clienteId":"CL030","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S069","S064","S077","S031"]},{"id":"CT031","clienteId":"CL031","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S128"]},{"id":"CT032","clienteId":"CL032","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S026"]},{"id":"CT033","clienteId":"CL033","companiaId":"CIA02","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S080"]},{"id":"CT034","clienteId":"CL034","companiaId":"CIA02","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S081"]},{"id":"CT035","clienteId":"CL035","companiaId":"CIA02","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S170"]},{"id":"CT036","clienteId":"CL036","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S052"]},{"id":"CT037","clienteId":"CL037","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S053"]},{"id":"CT038","clienteId":"CL038","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S073","S050","S051","S074"]},{"id":"CT039","clienteId":"CL039","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S075"]},{"id":"CT040","clienteId":"CL040","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S135"]},{"id":"CT041","clienteId":"CL041","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S123"]},{"id":"CT042","clienteId":"CL042","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S057"]},{"id":"CT043","clienteId":"CL043","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S025"]},{"id":"CT044","clienteId":"CL044","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S062"]},{"id":"CT045","clienteId":"CL045","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S063"]},{"id":"CT046","clienteId":"CL046","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S046"]},{"id":"CT047","clienteId":"CL047","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S032"]},{"id":"CT048","clienteId":"CL048","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S016"]},{"id":"CT049","clienteId":"CL049","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S049","S071","S072","S097"]},{"id":"CT050","clienteId":"CL050","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S067"]},{"id":"CT051","clienteId":"CL051","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S061"]},{"id":"CT052","clienteId":"CL052","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S146"]},{"id":"CT053","clienteId":"CL053","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S144"]},{"id":"CT054","clienteId":"CL054","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S042"]},{"id":"CT055","clienteId":"CL055","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S041"]},{"id":"CT056","clienteId":"CL056","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S036"]},{"id":"CT057","clienteId":"CL057","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S139"]},{"id":"CT058","clienteId":"CL058","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S019"]},{"id":"CT059","clienteId":"CL059","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S136"]},{"id":"CT060","clienteId":"CL060","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S033"]},{"id":"CT061","clienteId":"CL061","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S140"]},{"id":"CT062","clienteId":"CL062","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S028"]},{"id":"CT063","clienteId":"CL063","companiaId":"CIA02","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S082"]},{"id":"CT064","clienteId":"CL064","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S076"]},{"id":"CT065","clienteId":"CL065","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S120","S125"]},{"id":"CT066","clienteId":"CL066","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S037"]},{"id":"CT067","clienteId":"CL067","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S092","S098","S141"]},{"id":"CT068","clienteId":"CL068","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S118"]},{"id":"CT069","clienteId":"CL069","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S045"]},{"id":"CT070","clienteId":"CL070","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S018"]},{"id":"CT071","clienteId":"CL071","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S035","S023"]},{"id":"CT072","clienteId":"CL072","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S022"]},{"id":"CT073","clienteId":"CL073","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S066"]},{"id":"CT074","clienteId":"CL074","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S130"]},{"id":"CT075","clienteId":"CL075","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S129"]},{"id":"CT076","clienteId":"CL076","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S137"]},{"id":"CT077","clienteId":"CL077","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S102"]},{"id":"CT078","clienteId":"CL078","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S044"]},{"id":"CT079","clienteId":"CL079","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S010"]},{"id":"CT080","clienteId":"CL080","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S047"]},{"id":"CT081","clienteId":"CL081","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S014"]},{"id":"CT082","clienteId":"CL082","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S027","S059"]},{"id":"CT083","clienteId":"CL083","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S054"]},{"id":"CT084","clienteId":"CL084","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S043"]},{"id":"CT085","clienteId":"CL085","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S142"]},{"id":"CT086","clienteId":"CL086","companiaId":"CIA04","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S024"]},{"id":"CT087","clienteId":"CL087","companiaId":"CIA05","estado":"EJEMPLO","desde":"2026-01-01","hasta":null,"operaciones":["S131","S132"]}],"indicadores":[{"id":"L02","nombre":"Nivel de Servicio | Exactitud de Registro de Inventario (IRA)","dominio":"Almacén","prioridad":1,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":3,"reglas":13,"cubre":113},{"id":"L03","nombre":"Satisfacción del Cliente (NPS)","dominio":"Comercial","prioridad":2,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"NPS","sentido":"MAS_ES_MEJOR","campos":3,"reglas":13,"cubre":141},{"id":"L11","nombre":"Cobertura de Plantilla Operativa","dominio":"Capital humano","prioridad":9,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":141},{"id":"L12","nombre":"Rotación de Personal Operativo","dominio":"Capital humano","prioridad":10,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"PORCENTAJE","sentido":"MENOS_ES_MEJOR","campos":3,"reglas":13,"cubre":141},{"id":"L13","nombre":"Satisfacción del Empleado (eNPS)","dominio":"Capital humano","prioridad":11,"frecuencia":"Semestral","corte":"día 5 del mes siguiente al cierre","tipo":"NPS","sentido":"MAS_ES_MEJOR","campos":3,"reglas":13,"cubre":141},{"id":"L15","nombre":"Aprovechamiento de activos |%Vacancy (m2)","dominio":"Almacén","prioridad":12,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MENOS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L16","nombre":"Aprovechamiento de activos|%Utilización de Contenedores","dominio":"Transporte y distribución","prioridad":12,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":3},{"id":"L28","nombre":"Control de Toda la Plantilla (Número de Empleados)","dominio":"Capital humano","prioridad":26,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"CONTEO","sentido":"NEUTRO","campos":1,"reglas":6,"cubre":141},{"id":"L30","nombre":"% Tiempo Extra (Origen Traxion)","dominio":"Capital humano","prioridad":28,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MENOS_ES_MEJOR","campos":3,"reglas":13,"cubre":141},{"id":"L35","nombre":"Fatalidades","dominio":"Seguridad y SSMA","prioridad":33,"frecuencia":"Al ocurrir","corte":"dentro de 24 horas","tipo":"CONTEO","sentido":"MENOS_ES_MEJOR","campos":1,"reglas":6,"cubre":141},{"id":"L37","nombre":"Exactitud de Existencias de Inventario (ILA)","dominio":"Almacén","prioridad":35,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L38","nombre":"Cumplimiento al plan de descarga","dominio":"Almacén","prioridad":36,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L39","nombre":"Cumplimiento al plan de carga","dominio":"Almacén","prioridad":37,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L42","nombre":"% Incidencias y reclamaciones","dominio":"Almacén","prioridad":40,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MENOS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L44","nombre":"Prueba de entrega faltante o incorrecta (POD)","dominio":"Transporte y distribución","prioridad":42,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":3},{"id":"L49","nombre":"Incidencias del Camino","dominio":"Seguridad y SSMA","prioridad":50,"frecuencia":"Al ocurrir","corte":"dentro de 24 horas","tipo":"CONTEO","sentido":"MENOS_ES_MEJOR","campos":1,"reglas":6,"cubre":141},{"id":"L55","nombre":"Cumplimiento al Plan Antidoping y Alcoholemia","dominio":"Seguridad y SSMA","prioridad":57,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":141},{"id":"L58","nombre":"Dock to Delivery o Dock to Stock","dominio":"Almacén","prioridad":60,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L59","nombre":"Índice de Paquetes Perdidos - Missorts","dominio":"Transporte y distribución","prioridad":64,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"TASA","sentido":"MENOS_ES_MEJOR","campos":3,"reglas":13,"cubre":3},{"id":"L64","nombre":"Precisión de Escaneos (SSP)","dominio":"Almacén","prioridad":74,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L67","nombre":"Nivel de Servicio | Tasa de Servicios Perfectos (POF)","dominio":"Almacén","prioridad":78,"frecuencia":"Semanal","corte":"viernes 14:00","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":113},{"id":"L77","nombre":"Cumplimiento a Plan de Capacitación","dominio":"Capital humano","prioridad":92,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"PORCENTAJE","sentido":"MAS_ES_MEJOR","campos":2,"reglas":10,"cubre":141},{"id":"L78","nombre":"NPS Carriers","dominio":"Comercial","prioridad":93,"frecuencia":"Mensual","corte":"día 3 del mes siguiente","tipo":"NPS","sentido":"MAS_ES_MEJOR","campos":3,"reglas":13,"cubre":141}],"alcances":{"L02":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L03":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L11":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L12":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L13":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L15":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L16":["S155","S163","S156"],"L28":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L30":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L35":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L37":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L38":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L39":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L42":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L44":["S155","S163","S156"],"L49":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L55":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L58":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L59":["S155","S163","S156"],"L64":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L67":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S084","S055"],"L77":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"],"L78":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S079","S080","S081","S170","S082","S085","S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024","S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132","S009","S005","S006","S008","S007","S002","S003","S004","S083","S084","S055","S086","S087","S088"]},"origenes":[{"indicadorId":"L02","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L03","canal":"MANUAL","sistemaDestino":"CRM Salesforce","semanaDeTransicion":40,"estadoConexion":"PENDIENTE"},{"indicadorId":"L11","canal":"MANUAL","sistemaDestino":"Talentrax · sistema de personal","semanaDeTransicion":20,"estadoConexion":"PENDIENTE"},{"indicadorId":"L12","canal":"MANUAL","sistemaDestino":"Talentrax · sistema de personal","semanaDeTransicion":20,"estadoConexion":"PENDIENTE"},{"indicadorId":"L13","canal":"MANUAL","sistemaDestino":"Talentrax · sistema de personal","semanaDeTransicion":20,"estadoConexion":"PENDIENTE"},{"indicadorId":"L15","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L16","canal":"MANUAL","sistemaDestino":"Sistema de equipo","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L28","canal":"MANUAL","sistemaDestino":"Talentrax · sistema de personal","semanaDeTransicion":20,"estadoConexion":"PENDIENTE"},{"indicadorId":"L30","canal":"MANUAL","sistemaDestino":"Talentrax · sistema de personal","semanaDeTransicion":20,"estadoConexion":"PENDIENTE"},{"indicadorId":"L35","canal":"MANUAL","sistemaDestino":"Sistema SSMA","semanaDeTransicion":42,"estadoConexion":"PENDIENTE"},{"indicadorId":"L37","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L38","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L39","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L42","canal":"MANUAL","sistemaDestino":"WMS + Servicio a cliente","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L44","canal":"MANUAL","sistemaDestino":"TMS/WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L49","canal":"MANUAL","sistemaDestino":"Sistema SSMA","semanaDeTransicion":42,"estadoConexion":"PENDIENTE"},{"indicadorId":"L55","canal":"MANUAL","sistemaDestino":"Sistema SSMA","semanaDeTransicion":42,"estadoConexion":"PENDIENTE"},{"indicadorId":"L58","canal":"MANUAL","sistemaDestino":"WMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L59","canal":"MANUAL","sistemaDestino":"WMS/TMS","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L64","canal":"MANUAL","sistemaDestino":"Sistema Amazon","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L67","canal":"MANUAL","sistemaDestino":"WMS / CRM","semanaDeTransicion":14,"estadoConexion":"PENDIENTE"},{"indicadorId":"L77","canal":"MANUAL","sistemaDestino":"Plataforma de capacitación","semanaDeTransicion":42,"estadoConexion":"PENDIENTE"},{"indicadorId":"L78","canal":"MANUAL","sistemaDestino":"CRM Salesforce","semanaDeTransicion":40,"estadoConexion":"PENDIENTE"}],"responsables":[{"nombre":"Héctor Beltrán Aguilar","correo":"h.beltran@traxion.global","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S020","S013","S078","S015","S011","S012","S017","S048","S070","S069","S064","S052","S053","S073","S050","S051","S075","S074","S062","S063","S046","S040","S016","S049","S071","S072","S067","S061","S026","S027","S047","S054","S021","S038","S039","S042","S037","S077","S029","S034","S030","S031","S032","S033","S028","S060","S058","S025","S057","S059","S041","S036","S019","S076","S045","S018","S035","S022","S023","S066","S065","S044","S010","S014","S043","S024"]},{"nombre":"Christian Ivan Reyes","correo":"christian.reyes@solistica.com","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S090","S114","S091","S094","S100","S105","S108","S149","S134","S111","S113","S145","S115","S124","S127","S122","S117","S116","S128","S135","S123","S097","S146","S148","S144","S139","S136","S140","S120","S125","S092","S098","S141","S118","S130","S129","S137","S102","S142","S131","S132"]},{"nombre":"Gerardo Fajardo · y Paola Vanessa","correo":"g.fajardod@traxion.global · p.velazquez@traxion.global","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169"]},{"nombre":"Barbara Paulina Peña","correo":"barbara.pena@solistica.com","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S009","S005","S006","S008","S007"]},{"nombre":"Rene Morales · y Eduardo Lavalle","correo":"rene.morales@gruposid.com.mx · eduardo.lavalle@gruposid.com.mx","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S079","S080","S081","S082"]},{"nombre":"Adrian Guzman Cano","correo":"a.guzmanc@traxion.global","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S002","S003","S004"]},{"nombre":"Rafael Gomez Ledesma · y Jose Oscar Vidal Barrera","correo":"rafael.gomez.l@gruposid.com.mx · jose.vidal@gruposid.com.mx","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S170"]},{"nombre":"Salvador Moreno","correo":"s.moreno@traxion.global","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S085"]},{"nombre":"Oswaldo Juárez Rodriguez","correo":"o.juarez@traxion.global","verbo":"CAPTURA","origen":"CONTACTO","operaciones":["S083"]}],"huecos":{"operaciones_sin_clase":141,"operaciones_sin_sistema":46,"operaciones_sistema_independiente":44,"operaciones_sin_cliente_derivable":34,"operaciones_sin_contacto_de_captura":5,"operaciones_sin_contacto_de_ti":48,"correos_de_escalacion_en_nulo":141,"clientes_por_confirmar":87,"contratos_de_ejemplo":87,"negocios_sin_clase":4,"territorios_solo_derivados":5,"indicadores_sin_conexion":23,"sin_cliente":["S155","S163","S156","S164","S157","S165","S158","S166","S159","S167","S160","S168","S161","S169","S084","S085","S040","S021","S055","S065","S149","S148","S009","S005","S006","S008","S007","S086","S087","S088","S002","S003","S004","S083"]}};
+
+// La consola del administrador del maestro — la capa de pintura.
+//
+// Sin React y sin design system: los tokens de Traxion van copiados en la hoja de estilos.
+// Todo escribe en memoria; al recargar, vuelve al maestro generado. Las decisiones de
+// diseño heredadas del producto:
+//
+//   · la pantalla de inicio es el tablero de huecos — la quinta regla como página principal
+//   · el origen de cada renglón se pinta desde el dato (`origen`), no desde una lista aparte
+//   · EJEMPLO es naranja y persigue al contrato a todas partes
+//   · la respuesta arriba, en una frase con sujeto y verbo
+
+/* ============================================================== utilidades */
+
+const ICONOS = {"clipboard-list":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\"/><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"/><path d=\"M12 11h4\"/><path d=\"M12 16h4\"/><path d=\"M8 11h.01\"/><path d=\"M8 16h.01\"/>","building-2":"<path d=\"M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z\"/><path d=\"M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2\"/><path d=\"M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2\"/><path d=\"M10 6h4\"/><path d=\"M10 10h4\"/><path d=\"M10 14h4\"/><path d=\"M10 18h4\"/>","gauge":"<path d=\"m12 14 4-4\"/><path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/>","trending-up":"<polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/><polyline points=\"16 7 22 7 22 13\"/>","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/>","plus":"<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>","circle-check-big":"<path d=\"M21.801 10A10 10 0 1 1 17 3.335\"/><path d=\"m9 11 3 3L22 4\"/>"};
+
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function ico(nombre, alto = 16) {
+  return `<svg width="${alto}" height="${alto}" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    aria-hidden="true" style="flex-shrink:0">${ICONOS[nombre] || ""}</svg>`;
+}
+const n0 = (x) => x.toLocaleString("es-MX", { maximumFractionDigits: 0 });
+
+/** La insignia de origen: se pinta desde el dato. EJEMPLO y DERIVADO nunca se disfrazan. */
+function origen(o, estado) {
+  if (o === "EJEMPLO") return `<span class="insignia i-parcial">EJEMPLO</span>`;
+  if (o === "DERIVADO") {
+    return estado === "CONFIRMADO"
+      ? `<span class="insignia i-completa">confirmado</span>`
+      : `<span class="insignia i-azul">derivado · por confirmar</span>`;
+  }
+  if (o === "SEMILLA") return `<span class="insignia i-gris">semilla</span>`;
+  return `<span class="insignia i-completa">manual</span>`;
+}
+
+/* ============================================================== estado */
+
+const S = {
+  m: JSON.parse(JSON.stringify(MAESTRO)),   // copia mutable: la consola escribe en memoria
+  abiertos: new Set(["DIV01"]),             // nodos del árbol
+  cli: { busqueda: "", soloPorConfirmar: false },
+  ind: { canal: "" },
+  per: { asignarA: "" },
+  ops: { companiaLote: "", claseLote: "ALMACEN", hueco: "" },
+  registro: [],                             // lo que el administrador hizo en esta sesión
+};
+
+const CLASES = ["ALMACEN", "CROSSDOCK", "OFICINA", "PAQUETERIA", "ULTIMA_MILLA", "TRANSPORTE", "DISTRIBUCION"];
+
+function derivar() {
+  const m = S.m;
+  const opPorId = new Map(m.operaciones.map((o) => [o.id, o]));
+  const ciaPorId = new Map(m.companias.map((c) => [c.id, c]));
+  const negPorId = new Map(m.negocios.map((n) => [n.id, n]));
+  const terPorId = new Map(m.territorios.map((t) => [t.id, t]));
+  const cliPorId = new Map(m.clientes.map((c) => [c.id, c]));
+  const indPorId = new Map(m.indicadores.map((i) => [i.id, i]));
+
+  // Cuántos indicadores SEMANALES cubren cada operación — el peso de la captura semanal.
+  const semanalesDe = new Map();
+  for (const [indId, ops] of Object.entries(m.alcances)) {
+    if (indPorId.get(indId).frecuencia !== "Semanal") continue;
+    for (const op of ops) semanalesDe.set(op, (semanalesDe.get(op) || 0) + 1);
+  }
+
+  // La carga por persona: responsable × sus operaciones × semanales que las cubren.
+  const carga = m.responsables.map((r) => ({
+    ...r,
+    envios: r.operaciones.reduce((t, op) => t + (semanalesDe.get(op) || 0), 0),
+  })).sort((a, b) => b.envios - a.envios);
+
+  // Huecos vivos (se recalculan: confirmar un cliente o clasificar un lote los mueve).
+  const h = m.huecos;
+  const huecos = {
+    ...h,
+    operaciones_sin_clase: m.operaciones.filter((o) => o.clase === null).length,
+    clientes_por_confirmar: m.clientes.filter((c) => c.estado === "POR_CONFIRMAR").length,
+    contratos_de_ejemplo: m.contratos.filter((c) => c.estado === "EJEMPLO").length,
+    negocios_sin_clase: m.negocios.filter((n) => n.clase === null).length,
+    indicadores_sin_conexion: m.origenes.filter((o) => o.estadoConexion === "PENDIENTE").length,
+  };
+
+  // Índices inversos: son los que permiten recorrer una relación desde cualquier punta —
+  // la ficha de una operación necesita llegar a su cliente, su contrato, sus indicadores
+  // y su responsable sin recorrer las listas cada vez.
+  const contratoDeCliente = new Map(m.contratos.map((ct) => [ct.clienteId, ct]));
+  const clientesDeOperacion = new Map();
+  for (const c of m.clientes) {
+    for (const op of c.operaciones) {
+      const lista = clientesDeOperacion.get(op) || [];
+      lista.push(c);
+      clientesDeOperacion.set(op, lista);
+    }
+  }
+  const responsableDeOperacion = new Map();
+  for (const r of m.responsables) {
+    for (const op of r.operaciones) responsableDeOperacion.set(op, r);
+  }
+  const indicadoresDeOperacion = new Map();
+  for (const [indId, ops] of Object.entries(m.alcances)) {
+    for (const op of ops) {
+      const lista = indicadoresDeOperacion.get(op) || [];
+      lista.push(indId);
+      indicadoresDeOperacion.set(op, lista);
+    }
+  }
+  const origenDeIndicador = new Map(m.origenes.map((o) => [o.indicadorId, o]));
+  const alcanceTotal = Object.values(m.alcances).reduce((t, l) => t + l.length, 0);
+
+  return { opPorId, ciaPorId, negPorId, terPorId, cliPorId, indPorId, semanalesDe, carga, huecos,
+           contratoDeCliente, clientesDeOperacion, responsableDeOperacion,
+           indicadoresDeOperacion, origenDeIndicador, alcanceTotal };
+}
+
+/* ============================================================== enrutado */
+
+const RUTAS = [
+  { via: "/", etiqueta: "El modelo", icono: "clipboard-list" },
+  { via: "/panorama", etiqueta: "Panorama", icono: "building-2" },
+  { via: "/clientes", etiqueta: "Clientes y contratos", icono: "users" },
+  { via: "/indicadores", etiqueta: "Indicadores y origen", icono: "trending-up" },
+  { via: "/personas", etiqueta: "Personas", icono: "users" },
+  { via: "/calidad", etiqueta: "Calidad del maestro", icono: "gauge" },
+];
+
+function rutaActual() {
+  const bruta = (location.hash || "#/").slice(1);
+  return bruta.startsWith("/") ? bruta : "/" + bruta;
+}
+
+function pintar() {
+  const D = derivar();
+  const via = rutaActual();
+  const scroll = window.scrollY;
+
+  document.getElementById("raiz").innerHTML = `
+    <div class="marco">
+      <header class="cabecera">
+        <span class="marca">${ico("clipboard-list", 18)} CoreTX MDM</span>
+        <span class="etiqueta">Maestro de datos · demostración</span>
+        <span class="relleno"></span>
+        <span class="usuario" style="cursor:default">
+          <span class="avatar">AM</span>
+          <span class="chico fuerte">Administración del maestro</span>
+          <span class="rol">ADMINISTRA</span>
+        </span>
+      </header>
+      <div class="cuerpo">
+        <nav class="lateral">
+          ${RUTAS.map((r) => {
+            const activa = r.via === "/" ? via === "/" : via.startsWith(r.via);
+            return `<a href="#${r.via}" class="${activa ? "activa" : ""}">${ico(r.icono)} ${esc(r.etiqueta)}</a>`;
+          }).join("")}
+          <p class="nota">Todo escribe en memoria; al recargar vuelve al maestro derivado.
+          Los datos reales son ${S.m.operaciones.length} operaciones de la semilla.</p>
+        </nav>
+        <main class="pagina">${pantalla(via, D)}</main>
+      </div>
+    </div>`;
+
+  window.scrollTo(0, scroll);
+}
+
+function pantalla(via, D) {
+  if (via === "/") return modelo(D);
+  if (via === "/calidad") return calidad(D);
+  if (via === "/panorama") return panorama(D);
+  if (via.startsWith("/operacion/")) return fichaOperacion(via.slice("/operacion/".length), D);
+  if (via.startsWith("/cliente/")) return fichaCliente(via.slice("/cliente/".length), D);
+  if (via === "/clientes") return clientes(D);
+  if (via === "/indicadores") return indicadores(D);
+  if (via === "/personas") return personas(D);
+  return `<h1>No existe esa pantalla</h1><p class="apagado"><a href="#/" class="fuerte">Volver al modelo</a></p>`;
+}
+
+/** El mini-mapa contextual: dónde está esta pantalla dentro del modelo. */
+function miniMapa(eslabones, activo) {
+  return `<div class="minimapa" aria-label="Dónde está esta pantalla en el modelo">
+    ${eslabones.map((e, i) =>
+      (i ? "<i></i>" : "") + `<span class="${e === activo ? "activo" : ""}">${esc(e)}</span>`
+    ).join("")}
+  </div>`;
+}
+
+function seccion(titulo, nota, contenido) {
+  return `<section class="seccion">
+    <div class="titulo"><h2>${titulo}</h2>${nota ? `<span class="chico apagado">${nota}</span>` : ""}</div>
+    ${contenido}</section>`;
+}
+
+/* ============================================================== 0 · el modelo */
+
+/** La pantalla de entrada: **el modelo dibujado**, con la operación al centro — todo se
+ *  conecta a través de ella. Los conteos salen de los datos, no de texto escrito: si se
+ *  confirma un cliente o se conecta un indicador, el diagrama cambia. Cada caja navega. */
+// Las nueve llaves que la pantalla de calidad enseña como tarjetas. El modelo cuenta las
+// mismas: dos cuentas paralelas de «huecos abiertos» terminarían diciendo cosas distintas.
+const HUECOS_VISIBLES = [
+  "operaciones_sin_clase", "clientes_por_confirmar", "contratos_de_ejemplo",
+  "indicadores_sin_conexion", "operaciones_sin_cliente_derivable",
+  "correos_de_escalacion_en_nulo", "operaciones_sin_sistema",
+  "operaciones_sin_contacto_de_captura", "negocios_sin_clase",
+];
+
+function modelo(D) {
+  const m = S.m;
+  const abiertos = HUECOS_VISIBLES.filter((k) => D.huecos[k] > 0).length;
+
+  // Una caja del diagrama. Todo es SVG inline: cero dependencias, y navega con data-accion.
+  const caja = (x, y, w, h, nombre, cuenta, nota, destino, opciones = {}) => `
+    <g class="caja ${opciones.centro ? "centro" : ""}" data-accion="ir" data-a="${destino}"
+       role="link" tabindex="0" aria-label="${esc(nombre)}: ${esc(String(cuenta))}">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>
+      <text class="nombre" x="${x + 12}" y="${y + 21}">${esc(nombre)}</text>
+      <text class="cuenta" x="${x + w - 12}" y="${y + 24}" text-anchor="end">${esc(String(cuenta))}</text>
+      ${nota ? `<text class="nota ${opciones.alerta ? "alerta" : ""}" x="${x + 12}" y="${y + h - 10}">${esc(nota)}</text>` : ""}
+    </g>`;
+
+  const flecha = (d, verbo, vx, vy, ancla = "middle") => `
+    <path class="flecha-linea" d="${d}"/>
+    ${verbo ? `<text class="verbo" x="${vx}" y="${vy}" text-anchor="${ancla}">${esc(verbo)}</text>` : ""}`;
+
+  const svg = `
+  <svg viewBox="0 0 860 470" preserveAspectRatio="xMidYMid meet" role="img"
+       aria-label="El modelo del maestro: la operación al centro y sus cinco relaciones">
+    <defs><marker id="punta" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="hsl(var(--secondary-medium))"/>
+    </marker></defs>
+
+    <!-- BLOQUE A · la estructura, a la izquierda -->
+    ${caja(20, 20, 175, 52, "División", 1, "Logística", "#/panorama")}
+    ${flecha("M107,72 L107,96", "agrupa", 122, 88, "start")}
+    ${caja(20, 96, 175, 52, "Compañía", m.companias.length, "9 razones sociales", "#/panorama")}
+    ${caja(20, 190, 175, 52, "Negocio", m.negocios.length, D.huecos.negocios_sin_clase ? "sin clase todavía" : "clasificados", "#/panorama", { alerta: D.huecos.negocios_sin_clase > 0 })}
+    ${caja(20, 284, 175, 52, "Territorio", m.territorios.length, "derivado · sólo SID", "#/panorama", { alerta: true })}
+    ${flecha("M195,122 C280,122 290,175 348,192", "opera", 268, 130)}
+    ${flecha("M195,216 L348,216", "clasifica", 268, 208)}
+    ${flecha("M195,310 C280,310 290,255 348,238", "ubica", 268, 302)}
+
+    <!-- BLOQUE A · cliente y contrato, abajo -->
+    ${caja(20, 396, 175, 54, "Cliente", m.clientes.length, "derivado · por confirmar", "#/clientes", { alerta: true })}
+    ${flecha("M195,423 L280,423", "firma", 237, 415)}
+    ${caja(280, 396, 175, 54, "Contrato", m.contratos.length, "EJEMPLO — sin dato real", "#/clientes", { alerta: true })}
+    ${flecha("M455,423 C520,423 430,290 424,262", "se sirve desde", 508, 380, "start")}
+
+    <!-- EL EJE -->
+    ${caja(348, 168, 152, 94, "OPERACIÓN", m.operaciones.length, "el eje: todo pasa por aquí", "#/panorama", { centro: true })}
+
+    <!-- BLOQUE B · indicadores, a la derecha -->
+    ${caja(665, 20, 175, 52, "Indicador", m.indicadores.length, "tipo y sentido, sin firmar", "#/indicadores", { alerta: true })}
+    ${flecha("M752,72 L752,110", "se mide sobre", 764, 96, "start")}
+    ${caja(665, 110, 175, 64, "Alcance", n0(D.alcanceTotal), "genera los esperados", "#/indicadores")}
+    ${flecha("M665,150 C580,160 560,190 500,198", "", 0, 0)}
+    ${caja(665, 212, 175, 64, "Origen del dato", m.origenes.filter((o) => o.canal === "MANUAL").length + " manual", "el canal: Captura o conector", "#/indicadores")}
+    ${flecha("M665,244 C580,240 560,225 500,220", "", 0, 0)}
+
+    <!-- BLOQUE C · personas -->
+    ${caja(665, 340, 175, 54, "Persona", D.carga.length, "contactos ≠ asignación", "#/personas", { alerta: true })}
+    ${flecha("M665,364 C560,360 470,300 438,262", "captura", 560, 342)}
+  </svg>`;
+
+  // Bajo 700 px el SVG se esconde y el mismo dato sale como lista de cajas (CSS).
+  const lista = [
+    ["División · Compañía", `1 · ${m.companias.length}`, "#/panorama"],
+    ["Negocio · Territorio", `${m.negocios.length} · ${m.territorios.length} derivados`, "#/panorama"],
+    ["OPERACIÓN — el eje", m.operaciones.length, "#/panorama"],
+    ["Cliente → Contrato", `${m.clientes.length} por confirmar → ${m.contratos.length} EJEMPLO`, "#/clientes"],
+    ["Indicador → Alcance", `${m.indicadores.length} → ${n0(D.alcanceTotal)} renglones`, "#/indicadores"],
+    ["Persona (captura)", D.carga.length, "#/personas"],
+  ].map(([nombre, cuenta, destino]) =>
+    `<button class="hueco-tarjeta cerrado" data-accion="ir" data-a="${destino}">
+       <b class="num">${esc(String(cuenta))}</b><small><strong style="color:hsl(var(--foreground))">${esc(nombre)}</strong></small>
+     </button>`).join("");
+
+  return `
+    <h1>El modelo</h1>
+    <div class="respuesta"><p>
+      Una <strong>persona</strong> responde por <strong>operaciones</strong>; a cada operación
+      se le piden <strong>indicadores</strong> según su <strong>alcance</strong>, y la
+      operación sirve <strong>contratos</strong> de <strong>clientes</strong> dentro de la
+      estructura corporativa. <strong class="num">${m.operaciones.length}</strong> operaciones
+      al centro, y <a href="#/calidad" class="fuerte escala num">${abiertos} huecos abiertos</a>.
+    </p></div>
+
+    <div class="diagrama">
+      ${svg}
+      <div class="diagrama-lista">${lista}</div>
+    </div>
+    <p class="chico apagado">Cada caja navega a su pantalla, y los conteos salen del dato:
+    confirmar un cliente o conectar un indicador mueve este diagrama.</p>
+
+    ${seccion("Recorrer un ejemplo real", "la relación completa de un registro concreto", `
+      <div class="rejilla dos">
+        <a class="tarjeta" href="#/operacion/S011" style="text-decoration:none">
+          <h3>${ico("building-2", 15)} S011 · Colgate Querétaro, CEN</h3>
+          <p>Una operación dedicada: estructura → cliente derivado → contrato EJEMPLO →
+          sus 11 indicadores → quién la captura.</p>
+        </a>
+        <a class="tarjeta" href="#/operacion/S155" style="text-decoration:none">
+          <h3>${ico("building-2", 15)} S155 · Coecillo (Medistik)</h3>
+          <p>El otro caso: un CEDIS multicliente <strong>sin cliente derivable</strong> — la
+          misma cadena, con el hueco dicho donde va.</p>
+        </a>
+      </div>`)}`;
+}
+
+/* ============================================================== fichas */
+
+/** La ficha de una operación: **la cadena completa de un registro**, eslabón por eslabón.
+ *  Un caso concreto explica el modelo mejor que cinco tablas. */
+function fichaOperacion(id, D) {
+  const o = D.opPorId.get(id);
+  if (!o) return `<h1>No existe la operación ${esc(id)}</h1><p><a href="#/" class="fuerte">Volver al modelo</a></p>`;
+
+  const cia = D.ciaPorId.get(o.companiaId);
+  const neg = D.negPorId.get(o.negocioId);
+  const ter = o.territorioId ? D.terPorId.get(o.territorioId) : null;
+  const clientesDeEsta = D.clientesDeOperacion.get(id) || [];
+  const indicadores = (D.indicadoresDeOperacion.get(id) || []).map((i) => D.indPorId.get(i));
+  const responsable = D.responsableDeOperacion.get(id);
+  const motivoSinCliente = cia.nombre === "Medistik"
+    ? "es un CEDIS multicliente: el sitio sirve a varios clientes y el nombre no dice a cuáles"
+    : o.sitio ? "es un sitio multicuentas sin desglose en el nombre"
+    : "es una línea de negocio, no una operación dedicada a un cliente";
+
+  return `
+    ${miniMapa(["Estructura", "Cliente · Contrato", "Indicadores", "Captura"], null)}
+    <p class="chico"><a href="#/" class="apagado">← El modelo</a></p>
+    <h1>${esc(o.id)} <span class="apagado" style="font-weight:400">${esc(o.nombre)}</span></h1>
+    <p class="chico apagado">${o.activo ? "Operación activa" : "Operación inactiva"} ·
+      ${o.sistemaDeclarado ? "sistema " + esc(o.sistemaDeclarado) : `<span class="escala">sin sistema declarado</span>`} ·
+      ${o.clase ? esc(o.clase.replace(/_/g, " ")) : `<span class="escala">sin clase</span>`}</p>
+
+    <ul class="cadena">
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Estructura corporativa <a href="#/panorama">administrar →</a></p>
+        <p>División <b>Logística</b> → <b>${esc(cia.nombre)}</b>
+           <span class="chico apagado">(${esc(cia.corporativo)})</span> →
+           negocio <b>${esc(neg.nombre)}</b>
+           ${ter ? `→ territorio <b>${esc(ter.nombre)}</b> <span class="insignia i-azul">derivado</span>` : ""}</p>
+      </div></li>
+
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Cliente y contrato <a href="#/clientes">administrar →</a></p>
+        ${clientesDeEsta.length === 0
+          ? `<p><span class="insignia i-parcial">sin cliente derivable</span>
+             <span class="chico apagado">— ${motivoSinCliente}. El modelo lo soporta vía
+             contratos; el dato lo carga Comercial.</span></p>`
+          : clientesDeEsta.map((c) => {
+              const ct = D.contratoDeCliente.get(c.id);
+              const hermanas = ct ? ct.operaciones.filter((x) => x !== id) : [];
+              return `<p><a class="fuerte" href="#/cliente/${esc(c.id)}">${esc(c.nombre)}</a>
+                ${origen(c.origen, c.estado)}
+                ${ct ? `— vía contrato <b>${esc(ct.id)}</b> <span class="insignia i-parcial">EJEMPLO</span>
+                        <span class="chico apagado">desde ${esc(ct.desde)}</span>` : ""}</p>
+                ${hermanas.length ? `<div class="fichitas"><span class="chico apagado">del mismo contrato:</span>
+                  ${hermanas.map((h) => `<a class="fichita" href="#/operacion/${esc(h)}"><b>${esc(h)}</b> ${esc((D.opPorId.get(h) || {}).nombre || "")}</a>`).join("")}
+                </div>` : ""}`;
+            }).join("")}
+      </div></li>
+
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Indicadores que se le piden — ${indicadores.length} <a href="#/indicadores">administrar →</a></p>
+        <div class="fichitas">${indicadores.map((i) => {
+          const og = D.origenDeIndicador.get(i.id);
+          return `<span class="fichita" title="${esc(i.nombre)}"><b>${esc(i.id)}</b>
+            <span class="apagado">${esc(i.frecuencia.toLowerCase())}</span>
+            ${og.canal === "MANUAL"
+              ? `<span class="apagado">· manual → ${esc(og.sistemaDestino || "?")} S${og.semanaDeTransicion}</span>`
+              : `<span style="color:hsl(var(--primary-foreground))">· ${esc(og.sistemaDestino || "conectado")}</span>`}</span>`;
+        }).join("")}</div>
+        <p class="chico apagado" style="margin-top:.5rem">El alcance genera los envíos
+        esperados de esta operación — con o sin responsable: por eso el hueco de captura se ve.</p>
+      </div></li>
+
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Quién captura <a href="#/personas">administrar →</a></p>
+        ${responsable
+          ? `<p><b>${esc(responsable.nombre)}</b> <span class="insignia i-azul">contacto · derivado</span>
+             <span class="chico apagado">— responde por ${responsable.operaciones.length}
+             operaciones${responsable.operaciones.length > 20 ? " ⚠ concentración" : ""}</span></p>`
+          : `<p><span class="insignia i-parcial">sin quien capture</span>
+             <span class="chico apagado">— la operación sigue debiendo sus indicadores: los
+             esperados salen del alcance, no de la persona.</span></p>`}
+      </div></li>
+    </ul>`;
+}
+
+/** La ficha de un cliente: del cliente hacia abajo — contrato, operaciones, captura. */
+function fichaCliente(id, D) {
+  const c = D.cliPorId.get(id);
+  if (!c) return `<h1>No existe el cliente ${esc(id)}</h1><p><a href="#/clientes" class="fuerte">Volver a clientes</a></p>`;
+
+  const ct = D.contratoDeCliente.get(c.id);
+  const ops = c.operaciones.map((op) => D.opPorId.get(op)).filter(Boolean);
+  const semanales = c.operaciones.reduce((t, op) => t + (D.semanalesDe.get(op) || 0), 0);
+  const responsables = [...new Set(c.operaciones.map((op) => (D.responsableDeOperacion.get(op) || {}).nombre).filter(Boolean))];
+
+  return `
+    ${miniMapa(["Cliente", "Contrato", "Operaciones", "Captura"], "Cliente")}
+    <p class="chico"><a href="#/clientes" class="apagado">← Clientes y contratos</a></p>
+    <h1>${esc(c.nombre)} ${origen(c.origen, c.estado)}</h1>
+    ${c.estado === "POR_CONFIRMAR"
+      ? `<p class="chico apagado">Derivado del nombre de sus operaciones — confirmarlo (o
+         fusionarlo con otro) es una decisión de Comercial, no de una heurística.</p>` : ""}
+
+    <ul class="cadena">
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Contrato</p>
+        ${ct
+          ? `<p><b>${esc(ct.id)}</b> <span class="insignia i-parcial">EJEMPLO</span>
+             <span class="chico apagado">con ${esc((D.ciaPorId.get(ct.companiaId) || {}).nombre || "")}
+             · desde ${esc(ct.desde)} · sin dato real de vigencia, moneda ni tarifa — lo carga
+             Comercial, y al llegar habilita la pregunta de rentabilidad.</span></p>`
+          : `<p class="apagado">Sin contrato registrado.</p>`}
+      </div></li>
+
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Operaciones que lo sirven — ${ops.length}</p>
+        <div class="fichitas">${ops.map((o) => `
+          <a class="fichita" href="#/operacion/${esc(o.id)}"><b>${esc(o.id)}</b> ${esc(o.nombre)}
+            ${o.territorioId ? `<span class="apagado">· ${esc(D.terPorId.get(o.territorioId).nombre)}</span>` : ""}
+            ${o.activo ? "" : `<span class="apagado">· inactiva</span>`}</a>`).join("")}</div>
+      </div></li>
+
+      <li><div class="eslabon">
+        <p class="rotulo-eslabon">Lo que se le mide y quién lo captura</p>
+        <p><b class="num">${semanales}</b> <span class="chico apagado">envíos de indicadores
+        semanales por periodo, capturados por</span>
+        ${responsables.length ? responsables.map((r) => `<b>${esc(r)}</b>`).join(", ") : `<span class="escala">nadie con contacto conocido</span>`}</p>
+      </div></li>
+    </ul>`;
+}
+
+/* ============================================================== 1 · calidad */
+
+/** La pantalla de inicio del administrador **es el tablero de huecos**: la quinta regla
+ *  del proyecto —publicar el hueco en vez de rellenarlo— convertida en página principal. */
+function calidad(D) {
+  const h = D.huecos;
+  const tarjetas = [
+    { n: h.operaciones_sin_clase, que: "operaciones sin clase", nota: "133 nombres no dan pista; adivinar sería inventar", cierra: "Administración del maestro", ir: "#/panorama" },
+    { n: h.clientes_por_confirmar, que: "clientes por confirmar", nota: "derivados de los nombres de operación", cierra: "Comercial", ir: "#/clientes" },
+    { n: h.contratos_de_ejemplo, que: "contratos EJEMPLO", nota: "no existe ni un contrato real en ninguna fuente", cierra: "Comercial", ir: "#/clientes" },
+    { n: h.indicadores_sin_conexion, que: "indicadores sin conexión", nota: "todos llegan por el canal manual todavía", cierra: "Tecnología", ir: "#/indicadores" },
+    { n: h.operaciones_sin_cliente_derivable, que: "operaciones sin cliente derivable", nota: "CEDIS multicliente y líneas de transporte", cierra: "Comercial", ir: "#/clientes" },
+    { n: h.correos_de_escalacion_en_nulo, que: "correos de escalación en nulo", nota: "el rol está nombrado; el correo no", cierra: "Dirección de Logística", ir: "#/panorama" },
+    { n: h.operaciones_sin_sistema, que: "operaciones sin sistema declarado", nota: `+ ${h.operaciones_sistema_independiente} dicen «Sistema independinete»: el análisis publica 90`, cierra: "Tecnología", ir: "#/panorama" },
+    { n: h.operaciones_sin_contacto_de_captura, que: "operaciones sin quien capture", nota: "activas y sin contacto conocido", cierra: "Dirección de Logística", ir: "#/personas" },
+    { n: h.negocios_sin_clase, que: "negocios sin clase", nota: "la unidad de negocio no la trae", cierra: "Administración del maestro", ir: "#/panorama" },
+  ];
+  const abiertos = tarjetas.filter((t) => t.n > 0);
+
+  return `
+    <h1>Calidad del maestro</h1>
+    <div class="respuesta"><p>
+      El maestro gobierna <strong class="num">${S.m.operaciones.length}</strong> operaciones en
+      <strong class="num">${S.m.companias.length}</strong> compañías, y hoy tiene
+      <strong class="num escala">${abiertos.length}</strong> huecos abiertos.
+      Un dato inventado para que la pantalla se vea completa es peor que el vacío.
+    </p></div>
+
+    <div class="calidad">
+      ${tarjetas.map((t) => `
+        <button class="hueco-tarjeta ${t.n === 0 ? "cerrado" : ""}" data-accion="ir" data-a="${t.ir}">
+          <b class="num">${n0(t.n)}</b>
+          <small><strong style="color:hsl(var(--foreground))">${esc(t.que)}</strong><br>${esc(t.nota)}</small>
+          <span class="cierra">cierra: ${esc(t.cierra)}</span>
+        </button>`).join("")}
+    </div>
+
+    ${S.registro.length ? seccion("Lo que se cerró en esta sesión", "en memoria — al recargar vuelve",
+      `<ul style="list-style:none;padding:0;margin:0">${S.registro.map((r) =>
+        `<li style="padding:.4rem 0;border-bottom:1px solid hsl(var(--border))" class="chico">${r}</li>`).join("")}</ul>`) : ""}
+
+    <p class="chico apagado">Cada tarjeta dice quién cierra el hueco. El detalle de qué es
+    cada uno está en <code>MDM/00_ESTRATEGIA.md</code> §6.</p>`;
+}
+
+/* ============================================================== 2 · panorama */
+
+/** El árbol corporativo: división → compañía → negocio → operaciones. */
+function panorama(D) {
+  const m = S.m;
+  const filtroHueco = S.ops.hueco;
+
+  const pasaHueco = (o) =>
+    !filtroHueco
+    || (filtroHueco === "sin_clase" && o.clase === null)
+    || (filtroHueco === "sin_sistema" && o.sistemaDeclarado === null)
+    || (filtroHueco === "sin_captura" && !o.contactoCaptura);
+
+  const porCia = new Map();
+  for (const o of m.operaciones) {
+    if (!pasaHueco(o)) continue;
+    const porNeg = porCia.get(o.companiaId) || new Map();
+    const lista = porNeg.get(o.negocioId) || [];
+    lista.push(o);
+    porNeg.set(o.negocioId, lista);
+    porCia.set(o.companiaId, porNeg);
+  }
+
+  const candidatas = m.operaciones.filter((o) => o.clase === null
+    && (!S.ops.companiaLote || o.companiaId === S.ops.companiaLote));
+
+  const arbol = m.companias.map((cia) => {
+    const porNeg = porCia.get(cia.id) || new Map();
+    const total = [...porNeg.values()].reduce((t, l) => t + l.length, 0);
+    if (filtroHueco && total === 0) return "";
+    const abierta = S.abiertos.has(cia.id);
+    return `<li>
+      <div class="nodo ${abierta ? "abierto" : ""}" data-accion="nodo" data-a="${cia.id}">
+        <span class="flecha">▸</span>${ico("building-2", 14)}
+        <span class="fuerte">${esc(cia.nombre)}</span>
+        <span class="chico apagado">${esc(cia.corporativo)}</span>
+        <span class="conteo"><span class="insignia i-gris num">${total} operaciones</span></span>
+      </div>
+      ${abierta ? `<ul>${[...porNeg.entries()].map(([negId, ops]) => {
+        const neg = D.negPorId.get(negId);
+        const llave = cia.id + "|" + negId;
+        const abiertoNeg = S.abiertos.has(llave);
+        return `<li>
+          <div class="nodo ${abiertoNeg ? "abierto" : ""}" data-accion="nodo" data-a="${llave}">
+            <span class="flecha">▸</span>
+            <span>${esc(neg.nombre)}</span>
+            ${neg.clase ? `<span class="insignia i-gris">${esc(neg.clase)}</span>` : `<span class="insignia i-parcial">sin clase</span>`}
+            <span class="conteo"><span class="chico apagado num">${ops.length}</span></span>
+          </div>
+          ${abiertoNeg ? `<ul>${ops.map((o) => `
+            <li class="hoja">
+              <a class="fuerte" href="#/operacion/${esc(o.id)}">${esc(o.id)}</a>
+              <span class="chico trunca" style="max-width:16rem">${esc(o.nombre)}</span>
+              ${o.territorioId ? `<span class="insignia i-azul">${esc(D.terPorId.get(o.territorioId).nombre)}</span>` : ""}
+              ${o.clase ? `<span class="insignia i-gris">${esc(o.clase)}</span>` : `<span class="insignia i-parcial">sin clase</span>`}
+              ${o.sistemaDeclarado ? "" : `<span class="chico escala">sin sistema</span>`}
+              ${o.activo ? "" : `<span class="insignia i-gris">inactiva</span>`}
+            </li>`).join("")}</ul>` : ""}
+        </li>`;
+      }).join("")}</ul>` : ""}
+    </li>`;
+  }).join("");
+
+  return `
+    ${miniMapa(["División", "Compañía", "Negocio", "Operación"], "Operación")}
+    <h1>Panorama</h1>
+    <div class="respuesta"><p>
+      <strong>1</strong> división · <strong class="num">${m.companias.length}</strong> compañías ·
+      <strong class="num">${m.negocios.length}</strong> negocios ·
+      <strong class="num">${m.territorios.length}</strong> territorios derivados ·
+      <strong class="num">${m.operaciones.length}</strong> operaciones.
+      La clase está abierta en <strong class="num escala">${D.huecos.operaciones_sin_clase}</strong>.
+    </p></div>
+
+    <div class="filtros">
+      <div class="campo"><label for="p-hueco">Ver</label>
+        <select id="p-hueco" data-accion="ops-hueco">
+          <option value="" ${!filtroHueco ? "selected" : ""}>Todo</option>
+          <option value="sin_clase" ${filtroHueco === "sin_clase" ? "selected" : ""}>Sólo sin clase</option>
+          <option value="sin_sistema" ${filtroHueco === "sin_sistema" ? "selected" : ""}>Sólo sin sistema</option>
+          <option value="sin_captura" ${filtroHueco === "sin_captura" ? "selected" : ""}>Sólo sin quien capture</option>
+        </select></div>
+    </div>
+
+    <ul class="arbol">
+      <li><div class="nodo abierto" style="cursor:default">
+        ${ico("building-2", 15)} <span class="fuerte">División ${esc(m.division.nombre)}</span>
+        ${origen(m.division.origen)}
+      </div>
+      <ul>${arbol}</ul></li>
+    </ul>
+
+    ${seccion("Cerrar la clase por lote", `${candidatas.length} operaciones candidatas`, `
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+        <div class="campo"><label for="lote-cia">Compañía</label>
+          <select id="lote-cia" data-accion="lote-cia">
+            <option value="">Todas</option>
+            ${m.companias.map((c) => `<option value="${c.id}" ${S.ops.companiaLote === c.id ? "selected" : ""}>${esc(c.nombre)}</option>`).join("")}
+          </select></div>
+        <div class="campo"><label for="lote-clase">Clase</label>
+          <select id="lote-clase" data-accion="lote-clase">
+            ${CLASES.map((c) => `<option value="${c}" ${S.ops.claseLote === c ? "selected" : ""}>${c.replace(/_/g, " ")}</option>`).join("")}
+          </select></div>
+        <button class="boton" data-accion="clasificar-lote" ${candidatas.length === 0 ? "disabled" : ""}>
+          Clasificar ${candidatas.length}</button>
+      </div>
+      <p class="chico apagado" style="margin-top:.6rem">La clase nace en nulo a propósito:
+      133 nombres no dan ninguna pista y adivinarla sería inventar. Cerrarla es una decisión,
+      y por eso es un botón y no una migración.</p>`)}`;
+}
+
+/* ============================================================== 3 · clientes */
+
+function clientes(D) {
+  const m = S.m;
+  const texto = S.cli.busqueda.trim().toLowerCase();
+  const lista = m.clientes.filter((c) =>
+    (!S.cli.soloPorConfirmar || c.estado === "POR_CONFIRMAR")
+    && (!texto || c.nombre.toLowerCase().includes(texto)));
+
+  const contratoDe = new Map(m.contratos.map((ct) => [ct.clienteId, ct]));
+  const confirmados = m.clientes.filter((c) => c.estado === "CONFIRMADO").length;
+
+  return `
+    ${miniMapa(["Cliente", "Contrato", "Operación"], "Cliente")}
+    <h1>Clientes y contratos</h1>
+    <div class="respuesta"><p>
+      <strong class="num">${m.clientes.length}</strong> clientes derivados de los nombres de
+      operación — <strong class="num">${confirmados}</strong> confirmados,
+      <strong class="num escala">${m.clientes.length - confirmados}</strong> por confirmar — y
+      <strong class="num">${D.huecos.operaciones_sin_cliente_derivable}</strong> operaciones sin
+      cliente derivable. Los <strong class="num">${m.contratos.length}</strong> contratos son
+      <span class="insignia i-parcial">EJEMPLO</span>: enseñan la relación, no el dato.
+    </p></div>
+
+    <div class="filtros">
+      <div class="campo"><label for="c-buscar">Buscar</label>
+        <input id="c-buscar" type="text" value="${esc(S.cli.busqueda)}" placeholder="Cliente" data-accion="cli-buscar"></div>
+      <div class="campo"><label for="c-nuevo">Alta de cliente (manual)</label>
+        <div style="display:flex;gap:.5rem">
+          <input id="c-nuevo" type="text" placeholder="Nombre del cliente real">
+          <button class="boton" data-accion="alta-cliente">${ico("plus", 14)} Crear</button>
+        </div></div>
+      <div class="campo"><label>&nbsp;</label>
+        <button class="boton borde" data-accion="cli-filtro">${S.cli.soloPorConfirmar ? "Ver todos" : "Sólo por confirmar"}</button></div>
+    </div>
+
+    ${seccion("El maestro de clientes", `${lista.length} en pantalla`, `
+      <div class="desliza"><table>
+        <thead><tr><th>Cliente</th><th>Origen</th><th>Operaciones que lo sirven</th><th>Contrato</th><th></th></tr></thead>
+        <tbody>${lista.slice(0, 40).map((c) => {
+          const ct = contratoDe.get(c.id);
+          const visibles = c.operaciones.slice(0, 3);
+          return `<tr>
+            <td><a class="fuerte" href="#/cliente/${esc(c.id)}">${esc(c.nombre)}</a></td>
+            <td>${origen(c.origen, c.estado)}</td>
+            <td class="chico">${visibles.map((op) =>
+                `<a href="#/operacion/${esc(op)}" class="fuerte">${esc(op)}</a>`).join(" · ")
+              }${c.operaciones.length > 3 ? ` <span class="apagado">y ${c.operaciones.length - 3} más</span>` : ""}
+              ${c.operaciones.length === 0 ? `<span class="apagado">—</span>` : ""}</td>
+            <td class="chico">${ct
+              ? `${esc(ct.id)} <span class="insignia i-parcial">EJEMPLO</span> <span class="apagado">desde ${esc(ct.desde)}</span>`
+              : `<span class="apagado">—</span>`}</td>
+            <td class="der">${c.estado === "POR_CONFIRMAR"
+              ? `<button class="boton borde chico" data-accion="confirmar-cliente" data-a="${c.id}">Confirmar</button>`
+              : `<span class="insignia i-completa">✓</span>`}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>
+      ${lista.length > 40 ? `<p class="chico apagado" style="margin-top:.5rem">Se muestran 40 de ${lista.length}. Busque para acotar.</p>` : ""}`)}
+
+    <div class="aviso">${ico("triangle-alert", 14)} <strong>Confirmar no es un trámite.</strong>
+      El derivado produce duplicados legítimos —¿«Samsung», «Samsung PIQ» y «SDS Samsung» son
+      uno o tres?— y fusionarlos es una decisión de Comercial. El servicio del maestro trae
+      <code>POST /clientes/fusionar</code> para eso; esta demostración sólo confirma.</div>
+
+    ${seccion("Sin cliente derivable", `${D.huecos.operaciones_sin_cliente_derivable} operaciones — el hueco honesto`, `
+      <div class="desliza"><table>
+        <thead><tr><th>Operación</th><th>Compañía</th><th>Por qué</th></tr></thead>
+        <tbody>${S.m.huecos.sin_cliente.slice(0, 12).map((id) => {
+          const o = D.opPorId.get(id);
+          const cia = D.ciaPorId.get(o.companiaId);
+          const motivo = cia.nombre === "Medistik" ? "CEDIS multicliente: el sitio sirve a varios"
+            : o.sitio ? "sitio multicuentas sin desglose en el nombre"
+            : "línea de negocio, no cliente dedicado";
+          return `<tr>
+            <td><span class="fuerte">${esc(id)}</span> <span class="chico apagado">${esc(o.nombre)}</span></td>
+            <td class="chico">${esc(cia.nombre)}</td>
+            <td class="chico apagado">${motivo}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>
+      <p class="chico apagado" style="margin-top:.5rem">Estas operaciones se relacionan con
+      clientes <strong>a través de contratos</strong> cuando Comercial los cargue — el modelo
+      lo soporta; el dato no existe todavía.</p>`)}`;
+}
+
+/* ============================================================== 4 · indicadores */
+
+function indicadores(D) {
+  const m = S.m;
+  const canal = S.ind.canal;
+  const origenDe = new Map(m.origenes.map((o) => [o.indicadorId, o]));
+  const lista = m.indicadores.filter((i) => {
+    const o = origenDe.get(i.id);
+    return !canal || o.canal === canal;
+  });
+
+  const conectados = m.origenes.filter((o) => o.estadoConexion !== "PENDIENTE").length;
+
+  // El calendario de apagado, agrupado por semana de transición.
+  const porSemana = new Map();
+  for (const o of m.origenes) {
+    const s = o.semanaDeTransicion;
+    const grupo = porSemana.get(s) || [];
+    grupo.push(o);
+    porSemana.set(s, grupo);
+  }
+
+  return `
+    ${miniMapa(["Indicador", "Alcance", "Origen del dato", "Operación"], "Indicador")}
+    <h1>Indicadores y origen del dato</h1>
+    <div class="respuesta"><p>
+      Los <strong class="num">${m.indicadores.length}</strong> indicadores llegan hoy por el
+      canal <strong>manual</strong> — ese canal es CoreTX Captura —, y
+      <strong class="num">${conectados}</strong> se han conectado a su sistema de origen.
+      El alcance suma <strong class="num">${n0(Object.values(m.alcances).reduce((t, l) => t + l.length, 0))}</strong>
+      renglones de cobertura: de ahí salen los envíos esperados.
+    </p></div>
+
+    ${seccion("El calendario de transición", "⚠️ el año no está en ninguna fuente — lo cierra Tecnología", `
+      <div class="rejilla dos">${[...porSemana.entries()].sort((a, b) => a[0] - b[0]).map(([sem, grupo]) => `
+        <div class="tarjeta">
+          <h3>Semana ${sem}</h3>
+          <p class="chico">${grupo.map((g) => g.indicadorId).join(" · ")}</p>
+          <p class="chico apagado">${esc(grupo[0].sistemaDestino || "")}${grupo.length > 1 && new Set(grupo.map(g => g.sistemaDestino)).size > 1 ? " y otros" : ""}</p>
+        </div>`).join("")}</div>`)}
+
+    <div class="filtros">
+      <div class="campo"><label for="i-canal">Canal</label>
+        <select id="i-canal" data-accion="ind-canal">
+          <option value="">Todos</option>
+          <option value="MANUAL" ${canal === "MANUAL" ? "selected" : ""}>Manual (Captura)</option>
+          <option value="AUTOMATIZADO" ${canal === "AUTOMATIZADO" ? "selected" : ""}>Automatizado</option>
+        </select></div>
+    </div>
+
+    ${seccion("Indicadores", `${lista.length} en pantalla`, `
+      <div class="desliza"><table>
+        <thead><tr><th>Indicador</th><th>Dominio</th><th>Frecuencia</th><th>Tipo · sentido</th>
+          <th class="der">Cubre</th><th>Origen del dato</th><th></th></tr></thead>
+        <tbody>${lista.map((i) => {
+          const o = origenDe.get(i.id);
+          return `<tr>
+            <td><span class="fuerte">${esc(i.id)}</span>
+              <p class="chico apagado trunca" style="max-width:15rem">${esc(i.nombre)}</p></td>
+            <td class="chico">${esc(i.dominio)}</td>
+            <td class="chico">${esc(i.frecuencia)}</td>
+            <td class="chico">${esc(i.tipo)} · ${esc(i.sentido.replace(/_/g, " ").toLowerCase())}</td>
+            <td class="der num">${i.cubre}</td>
+            <td class="chico">${o.canal === "MANUAL"
+              ? `<span class="insignia i-azul">manual</span> → ${esc(o.sistemaDestino || "?")} en S${o.semanaDeTransicion}`
+              : `<span class="insignia i-completa">${esc(o.sistemaDestino || "")}</span> <span class="apagado">${esc(o.estadoConexion.toLowerCase().replace("_", " "))}</span>`}</td>
+            <td class="der">${o.canal === "MANUAL"
+              ? `<button class="boton borde chico" data-accion="conectar" data-a="${i.id}">Conectar</button>`
+              : ""}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`)}
+
+    <div class="aviso">${ico("triangle-alert", 14)} <strong>«Conectar» es la operación que
+      apaga la captura manual de un indicador</strong>: cierra la fila MANUAL con fecha y abre
+      una AUTOMATIZADO en pruebas. En el maestro real, Captura deja de generar esperados para
+      ese indicador — la misma tabla gobierna las dos vías. Aquí es una demostración en
+      memoria.</div>
+
+    <p class="chico apagado">La taxonomía (<code>tipo</code>, <code>sentido</code>) se derivó
+    de los datos y necesita firma de dominio. Los campos, fórmulas y las 239 reglas viven en
+    el sistema de captura: son del conector manual, no del maestro.</p>`;
+}
+
+/* ============================================================== 5 · personas */
+
+function personas(D) {
+  const m = S.m;
+  const tope = Math.max(...D.carga.map((c) => c.envios), 1);
+  const sinContacto = m.operaciones.filter((o) => !o.contactoCaptura);
+  const sinCaptura = sinContacto.filter((o) => o.activo);
+
+  return `
+    ${miniMapa(["Persona", "Responsabilidad", "Operación"], "Persona")}
+    <h1>Personas y responsabilidad</h1>
+    <div class="respuesta"><p>
+      <strong class="num">${D.carga.length}</strong> personas responden por la captura —
+      derivadas de los contactos del análisis, que <strong>no son una asignación</strong> — y
+      la más cargada debe <strong class="num escala">${n0(D.carga[0].envios)}</strong> envíos
+      por semana. ${sinCaptura.length === 0 && sinContacto.length > 0
+        ? `Las <strong class="num">${sinContacto.length}</strong> operaciones sin contacto
+           están <strong>inactivas</strong>: ninguna activa queda sin quien capture.`
+        : `<strong class="num escala">${sinCaptura.length}</strong> operaciones activas no
+           tienen a nadie.`}
+    </p></div>
+
+    ${seccion("Carga por persona", "envíos semanales según el alcance vigente", `
+      <div class="desliza"><table>
+        <thead><tr><th>Persona</th><th>Verbo</th><th>Origen</th><th class="der">Operaciones</th>
+          <th class="der">Envíos/semana</th><th style="width:9rem"></th><th></th></tr></thead>
+        <tbody>${D.carga.map((c) => `<tr>
+          <td class="fuerte">${esc(c.nombre)}<p class="chico apagado trunca" style="max-width:16rem">${esc(c.correo || "")}</p></td>
+          <td><span class="insignia i-azul">${esc(c.verbo)}</span></td>
+          <td>${origen("DERIVADO")}</td>
+          <td class="der num chico">${c.operaciones.slice(0, 3).map((op) =>
+              `<a href="#/operacion/${esc(op)}" class="fuerte">${esc(op)}</a>`).join(" ")
+            }${c.operaciones.length > 3 ? ` <span class="apagado">y ${c.operaciones.length - 3} más</span>` : ""}</td>
+          <td class="der num ${c.envios > 200 ? "escala fuerte" : ""}">${n0(c.envios)}${c.envios > 200 ? " ⚠" : ""}</td>
+          <td><span class="barra"><i style="width:${Math.round(c.envios / tope * 100)}%;${c.envios > 200 ? "background:hsl(var(--destructive-warm))" : ""}"></i></span></td>
+          <td class="der"><button class="boton plano chico" data-accion="retirar-persona" data-a="${esc(c.nombre)}">Retirar</button></td>
+        </tr>`).join("")}</tbody>
+      </table></div>
+      <p class="chico apagado" style="margin-top:.5rem">Retirar pone fecha de fin a la
+      responsabilidad; <strong>nunca borra</strong>. Las operaciones quedan debiendo sus
+      indicadores igual — los esperados salen del alcance, no de la persona: ésa es la
+      diferencia entre cobertura y responsabilidad.</p>`)}
+
+    ${seccion("Los tres verbos", "la responsabilidad generalizada", `
+      <div class="rejilla tres" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <div class="tarjeta"><h3>ADMINISTRA</h3><p class="chico apagado">Gobierna catálogos de un
+          ámbito. El dueño del maestro es ADMINISTRA × DIVISION. La API del maestro se
+          autoriza con este verbo: el maestro se gobierna con su propio modelo.</p></div>
+        <div class="tarjeta"><h3>CAPTURA</h3><p class="chico apagado">La asignación de CoreTX
+          Captura es el caso CAPTURA × OPERACION. Más de dos responsables del mismo ámbito se
+          permite; desde el tercero se avisa, no se bloquea.</p></div>
+        <div class="tarjeta"><h3>CONSULTA</h3><p class="chico apagado">Un director es CONSULTA ×
+          COMPANIA. En el lake se proyecta como seguridad a nivel de fila, derivada de esta
+          tabla — no mantenida a mano en cada tablero.</p></div>
+      </div>`)}
+
+    ${seccion("Sin contacto de captura", `${sinContacto.length} operaciones — las ${sinCaptura.length} activas primero`, sinContacto.length === 0
+      ? `<p class="chico apagado">Ninguna.</p>`
+      : `<div class="desliza"><table>
+          <thead><tr><th>Operación</th><th>Compañía</th><th></th></tr></thead>
+          <tbody>${sinContacto.map((o) => `<tr>
+            <td><span class="fuerte">${esc(o.id)}</span> <span class="chico apagado">${esc(o.nombre)}</span>
+              ${o.activo ? "" : ` <span class="insignia i-gris">inactiva</span>`}</td>
+            <td class="chico">${esc(D.ciaPorId.get(o.companiaId).nombre)}</td>
+            <td class="der"><button class="boton borde chico" data-accion="asignar-captura" data-a="${o.id}">Asignar…</button></td>
+          </tr>`).join("")}</tbody>
+        </table></div>`)}`;
+}
+
+/* ============================================================== sucesos */
+
+function anotar(texto) {
+  S.registro.unshift(`${texto} <span class="apagado">· ${new Date().toLocaleTimeString("es-MX")}</span>`);
+}
+
+document.addEventListener("click", (evento) => {
+  const nodo = evento.target.closest("[data-accion]");
+  if (!nodo) return;
+  const a = nodo.dataset.a;
+
+  switch (nodo.dataset.accion) {
+    case "ir": location.hash = a; return;
+    case "nodo":
+      S.abiertos.has(a) ? S.abiertos.delete(a) : S.abiertos.add(a);
+      break;
+    case "clasificar-lote": {
+      const ids = S.m.operaciones
+        .filter((o) => o.clase === null && (!S.ops.companiaLote || o.companiaId === S.ops.companiaLote))
+        .map((o) => o.id);
+      for (const o of S.m.operaciones) if (ids.includes(o.id)) o.clase = S.ops.claseLote;
+      anotar(`Clasificadas <strong>${ids.length}</strong> operaciones como ${S.ops.claseLote}`);
+      break;
+    }
+    case "confirmar-cliente": {
+      const c = S.m.clientes.find((x) => x.id === a);
+      if (c) { c.estado = "CONFIRMADO"; anotar(`Cliente <strong>${esc(c.nombre)}</strong> confirmado`); }
+      break;
+    }
+    case "alta-cliente": {
+      const campo = document.getElementById("c-nuevo");
+      const nombre = (campo ? campo.value : "").trim();
+      if (!nombre) return;
+      if (S.m.clientes.some((c) => c.nombre.toLowerCase() === nombre.toLowerCase())) return;
+      S.m.clientes.push({
+        id: `CL${String(S.m.clientes.length + 1).padStart(3, "0")}`,
+        nombre, estado: "CONFIRMADO", origen: "MANUAL", operaciones: [],
+      });
+      S.m.clientes.sort((x, y) => x.nombre.localeCompare(y.nombre));
+      anotar(`Cliente <strong>${esc(nombre)}</strong> creado a mano`);
+      break;
+    }
+    case "conectar": {
+      const o = S.m.origenes.find((x) => x.indicadorId === a);
+      if (o) {
+        o.canal = "AUTOMATIZADO";
+        o.estadoConexion = "EN_PRUEBAS";
+        anotar(`<strong>${a}</strong> conectado a ${esc(o.sistemaDestino || "su sistema")} — en pruebas; la captura manual se apaga al confirmar`);
+      }
+      break;
+    }
+    case "retirar-persona": {
+      const r = S.m.responsables.find((x) => x.nombre === a);
+      if (r) {
+        S.m.responsables = S.m.responsables.filter((x) => x !== r);
+        anotar(`Responsabilidad de <strong>${esc(a)}</strong> retirada — sus ${r.operaciones.length} operaciones siguen debiendo sus indicadores`);
+      }
+      break;
+    }
+    case "asignar-captura": {
+      const o = S.m.operaciones.find((x) => x.id === a);
+      if (o) {
+        o.contactoCaptura = "— por nombrar —";
+        anotar(`<strong>${a}</strong> marcada para asignar responsable`);
+      }
+      break;
+    }
+    case "cli-filtro": S.cli.soloPorConfirmar = !S.cli.soloPorConfirmar; break;
+    default: return;
+  }
+  pintar();
+});
+
+document.addEventListener("input", (evento) => {
+  const nodo = evento.target.closest("[data-accion]");
+  if (!nodo) return;
+  if (nodo.dataset.accion === "cli-buscar") {
+    S.cli.busqueda = nodo.value;
+    const foco = nodo.id, cursor = nodo.value.length;
+    pintar();
+    const otra = document.getElementById(foco);
+    if (otra) { otra.focus(); try { otra.setSelectionRange(cursor, cursor); } catch (e) {} }
+  }
+});
+
+document.addEventListener("change", (evento) => {
+  const nodo = evento.target.closest("[data-accion]");
+  if (!nodo) return;
+  switch (nodo.dataset.accion) {
+    case "ops-hueco": S.ops.hueco = nodo.value; break;
+    case "lote-cia": S.ops.companiaLote = nodo.value; break;
+    case "lote-clase": S.ops.claseLote = nodo.value; break;
+    case "ind-canal": S.ind.canal = nodo.value; break;
+    default: return;
+  }
+  pintar();
+});
+
+window.addEventListener("hashchange", pintar);
+
+if (!location.hash) location.hash = "#/";
+pintar();
+
+</script>
+</body>
+</html>
