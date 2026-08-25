@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Lock } from "lucide-react";
 import {
   Button,
@@ -14,17 +13,11 @@ import type { Values } from "./lib/formulas";
 import { check, isComplete } from "./lib/rules";
 import { useActions, useStore } from "./lib/store";
 import { useNow } from "./lib/now";
-import { savedAt, valuesFor } from "./lib/compliance";
+import { valuesFor } from "./lib/compliance";
 import { getCompany, getOperation } from "./lib/organization";
-import {
-  cutoffInWords,
-  isClosed,
-  periodOf,
-  rangeInWords,
-  timeLeft,
-} from "./lib/periods";
+import { cutoffInWords, isClosed, periodOf, rangeInWords } from "./lib/periods";
 import { IndicatorBlock } from "./IndicatorBlock";
-import { SubmissionStatusBadge } from "./SubmissionStatusBadge";
+import { CompletenessBadge } from "./CompletenessBadge";
 
 /**
  * The capture matrix for one operation in one week.
@@ -35,27 +28,27 @@ import { SubmissionStatusBadge } from "./SubmissionStatusBadge";
  *
  * Past the cutoff the screen still exists, read-only. Hiding it would leave the
  * person with no way to check what it was that they delivered.
+ *
+ * It renders inside the workspace, beside the list, so it carries no way back of
+ * its own: the breadcrumb and the list are both already on screen.
  */
 
 const styles = {
-  page: "flex flex-col gap-5 pb-24",
-  header: "flex flex-wrap items-start justify-between gap-4",
-  identity: "flex flex-col gap-1",
-  title: "text-xl font-semibold leading-tight sm:text-2xl",
+  panel: "flex flex-col gap-4",
+  header: "flex flex-wrap items-start justify-between gap-3",
+  identity: "flex min-w-0 flex-col gap-1",
+  title: "text-lg font-semibold leading-tight sm:text-xl",
   context: "text-sm text-muted-foreground",
-  status: "flex flex-col items-end gap-1",
-  deadline: "text-sm font-medium tabular-nums",
   notice:
     "flex items-start gap-3 border-l-4 border-secondary bg-muted/60 px-4 py-3 text-sm shadow-none",
   noticeIcon: "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground",
   noticeText: "leading-snug",
   blocks: "flex flex-col gap-3",
   footer:
-    "sticky bottom-0 -mx-4 mt-2 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur",
+    "sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background/95 px-4 py-3 backdrop-blur",
   gauge: "flex min-w-[12rem] flex-1 items-center gap-3",
   bar: "h-2 max-w-xs flex-1",
   fraction: "text-sm tabular-nums",
-  actions: "flex items-center gap-2",
 };
 
 export function CaptureForm({ operationId }: { operationId: string }) {
@@ -65,7 +58,6 @@ export function CaptureForm({ operationId }: { operationId: string }) {
 
   const period = periodOf(now);
   const closed = isClosed(period, now);
-  const remaining = timeLeft(period, now);
 
   const operation = getOperation(operationId);
   const company = operation ? getCompany(operation.companyId) : undefined;
@@ -76,7 +68,6 @@ export function CaptureForm({ operationId }: { operationId: string }) {
 
   const delivered = INDICATORS.filter((i) => isComplete(i, values)).length;
   const failures = INDICATORS.flatMap((i) => check(i, values));
-  const alreadySaved = savedAt(state, operationId, period);
 
   if (!operation) return null;
 
@@ -102,35 +93,20 @@ export function CaptureForm({ operationId }: { operationId: string }) {
     save(operationId, period, draft);
     toast.success(
       "Gracias, tus datos quedaron guardados",
-      `Están como borrador: puedes modificarlos hasta el ${cutoffInWords(period)}.`,
+      `Puedes modificarlos hasta el ${cutoffInWords(period)}.`,
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.identity}>
-          <h1 className={styles.title}>{operation.name}</h1>
+          <h2 className={styles.title}>{operation.name}</h2>
           <p className={styles.context}>
             {company?.name} · Semana {period.week} · {rangeInWords(period)}
           </p>
         </div>
-        <div className={styles.status}>
-          <SubmissionStatusBadge
-            status={
-              delivered === 0
-                ? closed
-                  ? "MISSED"
-                  : "PENDING"
-                : closed
-                  ? "OFFICIAL"
-                  : "DRAFT"
-            }
-          />
-          {remaining ? (
-            <span className={styles.deadline}>Cierra en {remaining}</span>
-          ) : null}
-        </div>
+        <CompletenessBadge delivered={delivered} total={INDICATORS.length} />
       </div>
 
       {closed ? (
@@ -166,16 +142,7 @@ export function CaptureForm({ operationId }: { operationId: string }) {
           </span>
         </div>
 
-        {closed ? null : (
-          <div className={styles.actions}>
-            {alreadySaved ? (
-              <Button asChild variant="outline">
-                <Link href="/intelligence/capture">Seguir con otra</Link>
-              </Button>
-            ) : null}
-            <Button onClick={onSave}>Guardar</Button>
-          </div>
-        )}
+        {closed ? null : <Button onClick={onSave}>Guardar</Button>}
       </div>
     </div>
   );

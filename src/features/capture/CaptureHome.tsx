@@ -1,7 +1,7 @@
 "use client";
 
 import { useStore } from "./lib/store";
-import { MyOperations } from "./MyOperations";
+import { CaptureWorkspace } from "./CaptureWorkspace";
 import { ComplianceTable } from "./ComplianceTable";
 
 /**
@@ -11,5 +11,5 @@ import { ComplianceTable } from "./ComplianceTable";
  */
 export function CaptureHome() {
   const { profile } = useStore();
-  return profile === "capture" ? <MyOperations /> : <ComplianceTable />;
+  return profile === "capture" ? <CaptureWorkspace /> : <ComplianceTable />;
 }

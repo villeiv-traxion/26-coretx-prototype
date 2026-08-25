@@ -112,13 +112,31 @@ function valuesFor(indicatorId: string, rand: () => number): Values {
  * What this operation delivered that week. `null` if it delivered nothing.
  * An indicator missing from the object is an indicator left undelivered.
  */
+/**
+ * Two operations that always arrive finished in the week in progress.
+ *
+ * Left to the odds, the open week is all partials and the landing screen never
+ * shows what a finished one looks like. Both belong to the people the demo
+ * opens as, so the delivered state is on screen from the first paint.
+ */
+const ALWAYS_COMPLETE = new Set(["OP09", "OP11"]);
+
 export function seededSubmission(
   operationId: string,
   period: Period,
   open = false,
 ): Values | null {
-  const behaviour = behaviourOf(operationId);
   const rand = rng(hash(`${operationId}|${periodKey(period)}`));
+
+  if (open && ALWAYS_COMPLETE.has(operationId)) {
+    const values: Values = {};
+    for (const indicator of INDICATORS) {
+      Object.assign(values, valuesFor(indicator.id, rand));
+    }
+    return values;
+  }
+
+  const behaviour = behaviourOf(operationId);
 
   // The week in progress is deliberately half done: if it arrived complete
   // there would be nothing left to capture, and the screen that matters most
