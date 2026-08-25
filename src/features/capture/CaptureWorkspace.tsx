@@ -5,9 +5,9 @@ import { Card } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
 import { operationsOf, progressOf } from "./lib/compliance";
-import { isClosed, periodOf, rangeInWords, timeLeft } from "./lib/periods";
+import { periodOf } from "./lib/periods";
 import { getUser } from "./lib/organization";
-import { Answer } from "./Answer";
+import { WeekHeader } from "./WeekHeader";
 import { OperationList } from "./OperationList";
 import { CaptureForm } from "./CaptureForm";
 
@@ -33,10 +33,6 @@ import { CaptureForm } from "./CaptureForm";
 
 const styles = {
   page: "flex flex-col gap-5",
-  header: "flex flex-wrap items-end justify-between gap-4",
-  deadline: "text-right",
-  deadlineValue: "text-lg font-semibold tabular-nums",
-  deadlineNote: "text-xs text-muted-foreground",
   /**
    * No `overflow-hidden` here, deliberately. Clipping would make this card the
    * scroll container for the sticky rail inside it, and a sticky element whose
@@ -63,8 +59,6 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
   const state = useStore();
   const now = useNow();
   const period = periodOf(now);
-  const closed = isClosed(period, now);
-  const remaining = timeLeft(period, now);
 
   const user = getUser(state.userId);
   const rows = operationsOf(state, state.userId)
@@ -74,31 +68,18 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
     }))
     .sort((a, b) => a.progress.delivered - b.progress.delivered);
 
-  const missing = rows.filter(
-    (r) => r.progress.delivered < r.progress.total,
+  const complete = rows.filter(
+    (r) => r.progress.delivered === r.progress.total,
   ).length;
-
-  const sentence = closed
-    ? `La semana ${period.week} ya cerró.`
-    : missing === 0
-      ? `No te falta nada en la semana ${period.week}.`
-      : `Te faltan ${missing} de ${rows.length} operaciones.`;
-
-  const support = closed
-    ? "Lo entregado quedó como oficial. Lo que no llegó a tiempo aparece como no entregado."
-    : `Semana ${period.week} · ${rangeInWords(period)} · ${user?.name ?? ""}`;
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <Answer sentence={sentence} support={support} />
-        {remaining ? (
-          <div className={styles.deadline}>
-            <p className={styles.deadlineValue}>Cierra en {remaining}</p>
-            <p className={styles.deadlineNote}>Viernes a las 14:00</p>
-          </div>
-        ) : null}
-      </div>
+      <WeekHeader
+        now={now}
+        complete={complete}
+        total={rows.length}
+        userName={user?.name ?? ""}
+      />
 
       <Card className={styles.surface}>
         <div className={selectedId ? styles.railHidden : styles.rail}>
