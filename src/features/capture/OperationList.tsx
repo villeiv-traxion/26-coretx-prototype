@@ -25,16 +25,31 @@ const styles = {
 interface OperationListProps {
   rows: { operation: Operation; progress: WeekProgress }[];
   selectedId?: string;
+  /** Whether a filter is narrowing the rail, which changes what empty means. */
+  filtered?: boolean;
 }
 
-export function OperationList({ rows, selectedId }: OperationListProps) {
+export function OperationList({
+  rows,
+  selectedId,
+  filtered = false,
+}: OperationListProps) {
   if (rows.length === 0) {
+    // An empty rail because of a filter and an empty rail because nobody
+    // assigned you anything are two different pieces of news.
     return (
       <div className={styles.empty}>
-        <NoDataMessage
-          title="No tienes operaciones asignadas"
-          message="Coordinación asigna quién entrega cada operación. Mientras nadie te asigne una, aquí no hay nada que capturar."
-        />
+        {filtered ? (
+          <NoDataMessage
+            title="Ninguna operación coincide"
+            message="Prueba con otro nombre o quita el filtro de estado."
+          />
+        ) : (
+          <NoDataMessage
+            title="No tienes operaciones asignadas"
+            message="Coordinación asigna quién entrega cada operación. Mientras nadie te asigne una, aquí no hay nada que capturar."
+          />
+        )}
       </div>
     );
   }

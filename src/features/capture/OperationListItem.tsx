@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Progress } from "@traxion-global/design-system/react";
 import { getCompany, type Operation } from "./lib/organization";
-import type { WeekProgress } from "./lib/compliance";
+import { completenessOf, type WeekProgress } from "./lib/compliance";
 import { CompletenessBadge } from "./CompletenessBadge";
 
 /**
@@ -71,10 +71,7 @@ export function OperationListItem({
             {company?.name} · {operation.territory}
           </p>
         </div>
-        <CompletenessBadge
-          delivered={progress.delivered}
-          total={progress.total}
-        />
+        <CompletenessBadge state={completenessOf(progress)} />
         <ChevronRight className={styles.chevron} aria-hidden="true" />
       </div>
 

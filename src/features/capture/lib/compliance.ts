@@ -37,6 +37,19 @@ export interface WeekProgress {
 
 export const PER_WEEK_TOTAL = INDICATORS.length;
 
+/** How much of a week is in, on one axis. Drives both the badge and the filter. */
+export type Completeness = "PENDING" | "PARTIAL" | "COMPLETE";
+
+/** Takes only the two counts, so a live form total works as well as a stored one. */
+export function completenessOf({
+  delivered,
+  total,
+}: Pick<WeekProgress, "delivered" | "total">): Completeness {
+  if (delivered === 0) return "PENDING";
+  if (delivered < total) return "PARTIAL";
+  return "COMPLETE";
+}
+
 /**
  * What was captured for an operation in a week: whatever the person typed if
  * they typed anything, and otherwise the derived history.

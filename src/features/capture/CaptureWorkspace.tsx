@@ -1,13 +1,20 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { MousePointerClick } from "lucide-react";
 import { Card } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
-import { operationsOf, progressOf } from "./lib/compliance";
+import {
+  completenessOf,
+  operationsOf,
+  progressOf,
+  type Completeness,
+} from "./lib/compliance";
 import { periodOf } from "./lib/periods";
 import { getUser } from "./lib/organization";
 import { WeekHeader } from "./WeekHeader";
+import { OperationFilters } from "./OperationFilters";
 import { OperationList } from "./OperationList";
 import { CaptureForm } from "./CaptureForm";
 
@@ -72,8 +79,32 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
     (r) => r.progress.delivered === r.progress.total,
   ).length;
 
+  const [query, setQuery] = useState("");
+  const [companies, setCompanies] = useState<string[]>([]);
+  const [states, setStates] = useState<Completeness[]>([]);
+
+  // An empty selection means "no restriction", not "nothing matches": that is
+  // what the combobox trigger says when it shows its placeholder.
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return rows.filter(({ operation, progress }) => {
+      if (companies.length > 0 && !companies.includes(operation.companyId)) {
+        return false;
+      }
+      if (states.length > 0 && !states.includes(completenessOf(progress))) {
+        return false;
+      }
+      return !term || operation.name.toLowerCase().includes(term);
+    });
+  }, [rows, query, companies, states]);
+
+  const filtering =
+    query.trim() !== "" || companies.length > 0 || states.length > 0;
+
   return (
     <div className={styles.page}>
+      {/* Counts the whole week and never the filtered view: it answers how you
+          are doing, not how the rail happens to be narrowed. */}
       <WeekHeader
         now={now}
         complete={complete}
@@ -81,9 +112,24 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
         userName={user?.name ?? ""}
       />
 
+      <OperationFilters
+        query={query}
+        onQueryChange={setQuery}
+        companies={companies}
+        onCompaniesChange={setCompanies}
+        states={states}
+        onStatesChange={setStates}
+        showing={visible.length}
+        total={rows.length}
+      />
+
       <Card className={styles.surface}>
         <div className={selectedId ? styles.railHidden : styles.rail}>
-          <OperationList rows={rows} selectedId={selectedId} />
+          <OperationList
+            rows={visible}
+            selectedId={selectedId}
+            filtered={filtering}
+          />
         </div>
 
         <div className={selectedId ? styles.panel : styles.panelHidden}>

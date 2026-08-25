@@ -13,7 +13,7 @@ import type { Values } from "./lib/formulas";
 import { check, isComplete } from "./lib/rules";
 import { useActions, useStore } from "./lib/store";
 import { useNow } from "./lib/now";
-import { valuesFor } from "./lib/compliance";
+import { completenessOf, valuesFor } from "./lib/compliance";
 import { getCompany, getOperation } from "./lib/organization";
 import { cutoffInWords, isClosed, periodOf, rangeInWords } from "./lib/periods";
 import { IndicatorBlock } from "./IndicatorBlock";
@@ -106,7 +106,9 @@ export function CaptureForm({ operationId }: { operationId: string }) {
             {company?.name} · Semana {period.week} · {rangeInWords(period)}
           </p>
         </div>
-        <CompletenessBadge delivered={delivered} total={INDICATORS.length} />
+        <CompletenessBadge
+          state={completenessOf({ delivered, total: INDICATORS.length })}
+        />
       </div>
 
       {closed ? (
