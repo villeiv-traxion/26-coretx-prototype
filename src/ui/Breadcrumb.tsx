@@ -13,6 +13,9 @@ const styles = {
   nav: "flex items-center gap-1.5 text-sm text-muted-foreground",
   link: "flex items-center gap-1.5 transition-colors hover:text-foreground",
   current: "flex items-center gap-1.5 text-foreground",
+  // Un tramo sin destino (un eje que aún no tiene pantalla) no es la página
+  // actual: se queda en gris para no competir con ella.
+  plain: "flex items-center gap-1.5",
   icon: "h-4 w-4",
   separator: "h-3.5 w-3.5 shrink-0",
 };
@@ -45,7 +48,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
               </Link>
             ) : (
               <span
-                className={styles.current}
+                className={isLast ? styles.current : styles.plain}
                 aria-current={isLast ? "page" : undefined}
               >
                 {content}

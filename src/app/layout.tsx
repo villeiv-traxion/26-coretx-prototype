@@ -3,7 +3,7 @@ import { Roboto } from "next/font/google";
 import { Toaster, TooltipProvider } from "@traxion-global/design-system/react";
 import { LanguageProvider } from "@/features/i18n";
 import { Header, Footer } from "@/features/shell";
-import { ChatWidget } from "@/features/chat/ChatWidget";
+import { ChatDock } from "@/features/chat/ChatDock";
 import "./globals.css";
 
 // El DS resuelve su tipografía vía `--font-sans` (Roboto en theme.css).
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Header />
               <main>{children}</main>
               <Footer />
-              <ChatWidget />
+              <ChatDock />
             </div>
           </TooltipProvider>
         </LanguageProvider>

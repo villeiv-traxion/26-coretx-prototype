@@ -6,7 +6,7 @@ import { Breadcrumb, type BreadcrumbItem } from "@/ui/Breadcrumb";
 import { getOperation } from "./lib/organization";
 
 /**
- * Dónde está el usuario dentro de la app, y cómo sale de aquí.
+ * Dónde está el usuario dentro de la plataforma, y cómo sale de aquí.
  *
  * El rastro se deriva de la ruta en un solo sitio y no en cada pantalla: la
  * tabla de cumplimiento se monta en dos rutas distintas (la raíz del perfil de
@@ -15,6 +15,7 @@ import { getOperation } from "./lib/organization";
  */
 
 const ROOT = "/intelligence/capture";
+const OPERATION_PREFIX = `${ROOT}/operation/`;
 
 /** Las hojas fijas: ruta exacta → cómo se llama esa pantalla. */
 const LEAVES: Record<string, string> = {
@@ -24,21 +25,23 @@ const LEAVES: Record<string, string> = {
 
 function trailFor(pathname: string): BreadcrumbItem[] {
   const home: BreadcrumbItem = { label: "Inicio", href: "/", icon: House };
+  // El eje no tiene pantalla propia todavía: se nombra, no se enlaza.
+  const axis: BreadcrumbItem = { label: "CoreTX Intelligence" };
 
-  if (pathname === ROOT) return [home, { label: "Captura" }];
+  if (pathname === ROOT) return [home, axis, { label: "CoreTX Captura" }];
 
-  const app: BreadcrumbItem = { label: "Captura", href: ROOT };
+  const app: BreadcrumbItem = { label: "CoreTX Captura", href: ROOT };
 
   const leaf = LEAVES[pathname];
-  if (leaf) return [home, app, { label: leaf }];
+  if (leaf) return [home, axis, app, { label: leaf }];
 
-  const operationId = pathname.startsWith(`${ROOT}/operation/`)
-    ? pathname.slice(`${ROOT}/operation/`.length)
+  const operationId = pathname.startsWith(OPERATION_PREFIX)
+    ? pathname.slice(OPERATION_PREFIX.length)
     : undefined;
   const operation = operationId ? getOperation(operationId) : undefined;
-  if (operation) return [home, app, { label: operation.name }];
+  if (operation) return [home, axis, app, { label: operation.name }];
 
-  return [home, app];
+  return [home, axis, app];
 }
 
 export function CaptureBreadcrumb({ className }: { className?: string }) {
