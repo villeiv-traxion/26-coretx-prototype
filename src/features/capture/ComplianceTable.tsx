@@ -8,7 +8,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@traxion-global/design-system/react";
-import { useNow, useStore } from "./lib/store";
+import { useStore } from "./lib/store";
+import { useNow } from "./lib/now";
 import {
   historyOf,
   progressOf,

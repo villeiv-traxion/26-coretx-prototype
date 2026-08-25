@@ -11,6 +11,6 @@
     son exactamente 12px, pero escala si esa base cambia.
   */
   html {
-    font-size: 75%;
+    font-size: 100%;
   }
 }

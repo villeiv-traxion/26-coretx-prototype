@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@traxion-global/design-system/react";
 import { useLanguage } from "@/features/i18n";
+import { DemoOptions, useDisplayName } from "./DemoOptions";
 
 const styles = {
   avatarTrigger: "w-9 h-9 cursor-pointer select-none",
@@ -37,17 +38,18 @@ interface UserControlsProps {
 
 export function UserControls({ userName }: UserControlsProps) {
   const { t, language, setLanguage } = useLanguage();
+  const displayName = useDisplayName(userName);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className={styles.avatarTrigger}>
-          <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+          <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.dropdownContent}>
         <DropdownMenuLabel className={styles.dropdownName}>
-          {userName}
+          {displayName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
@@ -67,6 +69,7 @@ export function UserControls({ userName }: UserControlsProps) {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DemoOptions />
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { Card, NoDataMessage } from "@traxion-global/design-system/react";
-import { useNow, useStore } from "./lib/store";
+import { useStore } from "./lib/store";
+import { useNow } from "./lib/now";
 import { operationsOf, progressOf } from "./lib/compliance";
 import { isClosed, periodOf, rangeInWords, timeLeft } from "./lib/periods";
 import { getUser } from "./lib/organization";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import {
   Button,
   Card,
@@ -12,7 +12,8 @@ import {
 import { INDICATORS } from "./lib/catalog";
 import type { Values } from "./lib/formulas";
 import { check, isComplete } from "./lib/rules";
-import { useActions, useNow, useStore } from "./lib/store";
+import { useActions, useStore } from "./lib/store";
+import { useNow } from "./lib/now";
 import { savedAt, valuesFor } from "./lib/compliance";
 import { getCompany, getOperation } from "./lib/organization";
 import {
@@ -38,8 +39,6 @@ import { SubmissionStatusBadge } from "./SubmissionStatusBadge";
 
 const styles = {
   page: "flex flex-col gap-5 pb-24",
-  back: "-ml-2 h-8 gap-1.5 self-start px-2 text-xs text-muted-foreground",
-  backIcon: "h-3.5 w-3.5",
   header: "flex flex-wrap items-start justify-between gap-4",
   identity: "flex flex-col gap-1",
   title: "text-xl font-semibold leading-tight sm:text-2xl",
@@ -109,13 +108,6 @@ export function CaptureForm({ operationId }: { operationId: string }) {
 
   return (
     <div className={styles.page}>
-      <Button asChild variant="ghost" className={styles.back}>
-        <Link href="/intelligence/capture">
-          <ArrowLeft className={styles.backIcon} />
-          Mis operaciones
-        </Link>
-      </Button>
-
       <div className={styles.header}>
         <div className={styles.identity}>
           <h1 className={styles.title}>{operation.name}</h1>

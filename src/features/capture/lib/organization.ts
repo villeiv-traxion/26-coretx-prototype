@@ -84,35 +84,63 @@ export const USERS: User[] = [
 ];
 
 /**
- * Starting assignment. Deliberately lopsided, because the real one is: U01
- * carries nine operations and three have nobody at all. An operation with no
- * one assigned still owes its indicators — the gap has to be visible.
+ * Starting assignment.
+ *
+ * Shaped after the only real source there is on this: the Responsable column of
+ * `Propuesta plantilla SID Logistica.xlsx`, one name per row. It is worth being
+ * precise about the source, because it says the opposite of what the master
+ * data suggests — the nine names in `maestro.json` are flagged `CONTACTO`, and
+ * the docs are explicit that contacts of an analysis are not an assignment.
+ *
+ * What the spreadsheet actually shows, across 68 operations:
+ *
+ *   32 people · median 2 · mean 2.2 · the largest holds 12
+ *   22 of the 32 carry one or two operations; 14 carry exactly one
+ *   17 of the 68 operations have nobody at all — a full quarter
+ *
+ * So there is no one person buried under 66 warehouses. There is a long tail of
+ * people with a single site, one person with 12, and a wide hole. Scaled to 24
+ * operations that is 4 · 3 · 3 · 2 · 2 · 1 · 1 · 1 · 1 · 1 over ten people,
+ * with six operations unassigned.
+ *
+ * **This is the fact that decides what the capture landing screen should be.**
+ * The typical person opens this to find one or two rows, not a queue.
+ *
+ * One more thing the spreadsheet shows and this model flattens: 18 of the 68
+ * operations carry a *different* responsible in each tab, so responsibility is
+ * really per operation x data group. With a single group here it collapses to
+ * one name per operation.
+ *
+ * An operation with nobody assigned still owes its indicators. The gap has to
+ * be visible or it never gets closed.
  */
 export const INITIAL_ASSIGNMENTS: Record<string, string[]> = {
-  OP01: ["U01", "U02"],
+  // The closest thing to a concentrator: four of eighteen, like the real 24%.
+  OP01: ["U01", "U03"],
   OP02: ["U01"],
   OP03: ["U01"],
   OP04: ["U01"],
-  OP05: ["U01"],
-  OP06: ["U01", "U04"],
-  OP07: ["U01"],
-  OP08: ["U01"],
-  OP09: ["U01"],
-  OP10: ["U03"],
-  OP11: ["U05"],
-  OP12: ["U06", "U07"],
-  OP13: ["U08"],
-  OP14: ["U09"],
-  OP15: ["U10", "U11"],
-  OP16: [],
-  OP17: ["U13"],
-  OP18: ["U14"],
-  OP19: ["U15", "U16", "U17"],
-  OP20: [],
-  OP21: ["U18"],
-  OP22: ["U12"],
-  OP23: [],
-  OP24: ["U02"],
+  OP05: ["U02"],
+  OP06: ["U02"],
+  OP07: [],
+  OP08: ["U02"],
+  OP09: ["U03"],
+  OP10: [],
+  OP11: ["U03"],
+  OP12: ["U04"],
+  OP13: ["U04"],
+  OP14: [],
+  OP15: ["U05"],
+  OP16: ["U05"],
+  // The long tail: one site each, which is what most people actually have.
+  OP17: ["U06"],
+  OP18: [],
+  OP19: ["U07"],
+  OP20: ["U08"],
+  OP21: [],
+  OP22: ["U09"],
+  OP23: ["U10"],
+  OP24: [],
 };
 
 export function getOperation(id: string): Operation | undefined {

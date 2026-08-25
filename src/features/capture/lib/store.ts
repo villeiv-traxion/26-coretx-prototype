@@ -32,25 +32,16 @@ export interface State {
   assignments: Record<string, string[]>;
   /** Key: `OP07|2026-W35`. */
   submissions: Record<string, Submission>;
-  /**
-   * The date the app believes today is.
-   *
-   * It starts anchored to a Wednesday rather than to the real clock for two
-   * reasons: the server and the browser have to render the same thing, and a
-   * demo whose whole subject is a deadline needs the deadline to be movable.
-   */
-  simulatedDate: string;
 }
-
-/** Wednesday of week 35, 2026. The cutoff lands that Friday at 14:00. */
-export const ANCHOR = "2026-08-26T10:00:00";
 
 const INITIAL: State = Object.freeze({
   profile: "capture" as Profile,
-  userId: "U01",
+  // U03 carries three operations, close to the median of the real spreadsheet.
+  // Opening on the one person with four would show the queue at its most
+  // flattering and hide what most people actually walk into.
+  userId: "U03",
   assignments: INITIAL_ASSIGNMENTS,
   submissions: {},
-  simulatedDate: ANCHOR,
 });
 
 const listeners = new Set<() => void>();
@@ -96,18 +87,11 @@ export function useStore(): State {
   return useSyncExternalStore(subscribe, read, onServer);
 }
 
-/** The date the app takes for today. */
-export function useNow(): Date {
-  const { simulatedDate } = useStore();
-  return new Date(simulatedDate);
-}
-
 export interface Actions {
   setProfile: (profile: Profile) => void;
   setUser: (userId: string) => void;
   assign: (operationId: string, userIds: string[]) => void;
   save: (operationId: string, period: Period, values: Values) => void;
-  setClock: (date: Date) => void;
   reset: () => void;
 }
 
@@ -143,10 +127,6 @@ export function useActions(): Actions {
     [],
   );
 
-  const setClock = useCallback((date: Date) => {
-    write({ ...read(), simulatedDate: date.toISOString() });
-  }, []);
-
   const reset = useCallback(() => {
     try {
       localStorage.removeItem(KEY);
@@ -157,5 +137,5 @@ export function useActions(): Actions {
     listeners.forEach((notify) => notify());
   }, []);
 
-  return { setProfile, setUser, assign, save, setClock, reset };
+  return { setProfile, setUser, assign, save, reset };
 }

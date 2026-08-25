@@ -19,8 +19,14 @@ import { useStore } from "./lib/store";
  * a division again.
  */
 
-/** Above this, one person is holding up too much of the week. */
-const CONCENTRATION = 5;
+/**
+ * Above this, one person is holding up too much of the week.
+ *
+ * Four out of eighteen assigned operations is 22%, which is where the real
+ * spreadsheet puts its largest carrier (12 of 51). Scaled differently, this
+ * number has to move with it.
+ */
+const CONCENTRATION = 4;
 
 const styles = {
   card: "shadow-none",
@@ -38,9 +44,9 @@ export function WorkloadPanel() {
   const state = useStore();
   const workload = workloadByPerson(state);
 
-  const ranked = [...workload.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  // The tail of people with a single site is the point, not noise to trim: it
+  // is what says the work is already spread thin rather than piled on one desk.
+  const ranked = [...workload.entries()].sort((a, b) => b[1] - a[1]);
 
   const unassigned = OPERATIONS.filter(
     (o) => (state.assignments[o.id] ?? []).length === 0,
