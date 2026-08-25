@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/features/i18n";
 import type { CoretxApp } from "@/features/apps";
@@ -19,12 +20,28 @@ export function AppsPanelItem({ app }: AppsPanelItemProps) {
   const { t } = useLanguage();
   const { name } = t.apps[app.id];
 
-  return (
-    <button type="button" className={styles.row} disabled={!app.hasAccess}>
+  const contenido = (
+    <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={app.illustration} alt="" className={styles.illustration} />
       <span className={styles.name}>{name}</span>
       <ChevronRight className={styles.chevron} aria-hidden="true" />
+    </>
+  );
+
+  // Sólo las apps que existen dentro del prototipo navegan; el resto se quedan
+  // como botones inertes, que es lo que son.
+  if (app.hasAccess && app.href) {
+    return (
+      <Link href={app.href} className={styles.row}>
+        {contenido}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" className={styles.row} disabled={!app.hasAccess}>
+      {contenido}
     </button>
   );
 }

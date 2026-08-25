@@ -20,6 +20,11 @@ export type CoretxApp = {
    * fijo, para poder mostrar el estado sin acceso.
    */
   hasAccess: boolean;
+  /**
+   * Destino del botón «Abrir». Sólo lo tienen las apps que ya existen dentro
+   * del prototipo; el resto siguen siendo cards sin navegación.
+   */
+  href?: string;
 };
 
 /**
@@ -62,6 +67,7 @@ export const APPS: CoretxApp[] = [
     category: "transversal",
     illustration: "/apps/intelligence.svg",
     hasAccess: true,
+    href: "/intelligence/capture",
   },
   {
     id: "navigate",

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Button,
   Card,
@@ -56,9 +57,14 @@ export function AppCard({ app }: AppCardProps) {
 
       <CardContent className={styles.linksSection}>
         {app.hasAccess ? (
-          // Prototipo: el botón aún no navega a ningún destino.
-          <Button variant="outline" size="lg" className={styles.linkButton}>
-            {openLabel}
+          // Sin `href` la card sigue siendo un marcador: la app no existe todavía.
+          <Button
+            asChild={Boolean(app.href)}
+            variant="outline"
+            size="lg"
+            className={styles.linkButton}
+          >
+            {app.href ? <Link href={app.href}>{openLabel}</Link> : openLabel}
           </Button>
         ) : (
           <Tooltip>

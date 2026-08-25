@@ -43,6 +43,7 @@ Queda fuera el **bloque 1** (maestro de datos): alta de divisiones, empresas y o
 14. Toda la UI con `@traxion-global/design-system`, vía el MCP.
 15. Un solo formulario. El constructor de formularios es una fase posterior.
 16. Control para mover la fecha simulada — sin él no se puede enseñar la transición a *Cerrado*.
+17. **Código en inglés, interfaz en español**, que es la convención del repo. Los ids de campo del catálogo (`C_L02_unidades_contadas`) se conservan literales: son claves del sistema real, no identificadores nuestros.
 
 ---
 

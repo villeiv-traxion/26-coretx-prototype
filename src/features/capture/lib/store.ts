@@ -1,0 +1,161 @@
+"use client";
+
+import { useCallback, useSyncExternalStore } from "react";
+import { INITIAL_ASSIGNMENTS } from "./organization";
+import { periodKey, type Period } from "./periods";
+import type { Values } from "./formulas";
+
+/**
+ * Prototype state, in `localStorage`.
+ *
+ * Read through `useSyncExternalStore` rather than React state — the same
+ * pattern the language uses — so the persisted value arrives without a
+ * `setState` inside an effect and without a hydration mismatch.
+ *
+ * Only what someone changed lives here: the history of past weeks is derived in
+ * `seed.ts` and takes up no bytes at all.
+ */
+
+const KEY = "coretx-capture";
+
+export type Profile = "coordination" | "capture";
+
+export interface Submission {
+  values: Values;
+  savedAt: string;
+}
+
+export interface State {
+  profile: Profile;
+  /** Who I am while in the capture profile. */
+  userId: string;
+  assignments: Record<string, string[]>;
+  /** Key: `OP07|2026-W35`. */
+  submissions: Record<string, Submission>;
+  /**
+   * The date the app believes today is.
+   *
+   * It starts anchored to a Wednesday rather than to the real clock for two
+   * reasons: the server and the browser have to render the same thing, and a
+   * demo whose whole subject is a deadline needs the deadline to be movable.
+   */
+  simulatedDate: string;
+}
+
+/** Wednesday of week 35, 2026. The cutoff lands that Friday at 14:00. */
+export const ANCHOR = "2026-08-26T10:00:00";
+
+const INITIAL: State = Object.freeze({
+  profile: "capture" as Profile,
+  userId: "U01",
+  assignments: INITIAL_ASSIGNMENTS,
+  submissions: {},
+  simulatedDate: ANCHOR,
+});
+
+const listeners = new Set<() => void>();
+let cache: State | null = null;
+
+function read(): State {
+  if (cache) return cache;
+
+  let loaded: State;
+  try {
+    const raw = localStorage.getItem(KEY);
+    loaded = raw ? { ...INITIAL, ...JSON.parse(raw) } : INITIAL;
+  } catch {
+    loaded = INITIAL;
+  }
+
+  cache = loaded;
+  return loaded;
+}
+
+function write(next: State) {
+  cache = next;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    // Private window or storage full: the session carries on, unpersisted.
+  }
+  listeners.forEach((notify) => notify());
+}
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+function onServer(): State {
+  return INITIAL;
+}
+
+export function useStore(): State {
+  return useSyncExternalStore(subscribe, read, onServer);
+}
+
+/** The date the app takes for today. */
+export function useNow(): Date {
+  const { simulatedDate } = useStore();
+  return new Date(simulatedDate);
+}
+
+export interface Actions {
+  setProfile: (profile: Profile) => void;
+  setUser: (userId: string) => void;
+  assign: (operationId: string, userIds: string[]) => void;
+  save: (operationId: string, period: Period, values: Values) => void;
+  setClock: (date: Date) => void;
+  reset: () => void;
+}
+
+export function useActions(): Actions {
+  const setProfile = useCallback((profile: Profile) => {
+    write({ ...read(), profile });
+  }, []);
+
+  const setUser = useCallback((userId: string) => {
+    write({ ...read(), userId });
+  }, []);
+
+  const assign = useCallback((operationId: string, userIds: string[]) => {
+    const current = read();
+    write({
+      ...current,
+      assignments: { ...current.assignments, [operationId]: userIds },
+    });
+  }, []);
+
+  const save = useCallback(
+    (operationId: string, period: Period, values: Values) => {
+      const current = read();
+      const key = `${operationId}|${periodKey(period)}`;
+      write({
+        ...current,
+        submissions: {
+          ...current.submissions,
+          [key]: { values, savedAt: new Date().toISOString() },
+        },
+      });
+    },
+    [],
+  );
+
+  const setClock = useCallback((date: Date) => {
+    write({ ...read(), simulatedDate: date.toISOString() });
+  }, []);
+
+  const reset = useCallback(() => {
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      // Nothing to clear.
+    }
+    cache = null;
+    listeners.forEach((notify) => notify());
+  }, []);
+
+  return { setProfile, setUser, assign, save, setClock, reset };
+}
