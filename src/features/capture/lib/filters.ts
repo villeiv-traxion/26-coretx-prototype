@@ -128,6 +128,95 @@ export function useOperationFilters(): OperationFilterState {
   };
 }
 
+const UNASSIGNED = "un";
+
+export interface CoordinationFilterState {
+  query: string;
+  setQuery: (query: string) => void;
+  companies: string[];
+  setCompanies: (companies: string[]) => void;
+  unassignedOnly: boolean;
+  setUnassignedOnly: (only: boolean) => void;
+  clear: () => void;
+  active: boolean;
+}
+
+/**
+ * The coordination filters, in the URL for the same reasons the capture ones
+ * are. They share `q` and `co` with the rail so switching profile keeps a
+ * narrowing that still means something, and swap the per-week state for the gap
+ * that coordination is here to close.
+ */
+export function useCoordinationFilters(): CoordinationFilterState {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+
+  const urlQuery = params.get(QUERY) ?? "";
+  const companies = useMemo(() => parseList(params.get(COMPANIES)), [params]);
+  const unassignedOnly = params.get(UNASSIGNED) === "1";
+
+  const [draft, setDraft] = useState(urlQuery);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const write = useCallback(
+    (entries: [string, string][]) => {
+      const next = new URLSearchParams(params.toString());
+      for (const [key, value] of entries) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      const search = next.toString();
+      router.replace(search ? `${pathname}?${search}` : pathname, {
+        scroll: false,
+      });
+    },
+    [params, pathname, router],
+  );
+
+  const setQuery = useCallback(
+    (value: string) => {
+      setDraft(value);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(
+        () => write([[QUERY, value.trim()]]),
+        SETTLE_MS,
+      );
+    },
+    [write],
+  );
+
+  return {
+    query: draft,
+    setQuery,
+    companies,
+    setCompanies: useCallback(
+      (value: string[]) => write([[COMPANIES, value.join(",")]]),
+      [write],
+    ),
+    unassignedOnly,
+    setUnassignedOnly: useCallback(
+      (only: boolean) => write([[UNASSIGNED, only ? "1" : ""]]),
+      [write],
+    ),
+    // One write for all three, for the reason the capture `clear` gives.
+    clear: useCallback(() => {
+      if (timer.current) clearTimeout(timer.current);
+      setDraft("");
+      write([
+        [QUERY, ""],
+        [COMPANIES, ""],
+        [UNASSIGNED, ""],
+      ]);
+    }, [write]),
+    active:
+      draft.trim() !== "" || companies.length > 0 || unassignedOnly,
+  };
+}
+
 const WEEK = "w";
 
 /**

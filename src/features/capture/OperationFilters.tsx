@@ -1,11 +1,12 @@
 "use client";
 
-import { Search, X } from "lucide-react";
-import { Button, Input } from "@traxion-global/design-system/react";
+import { X } from "lucide-react";
+import { Button } from "@traxion-global/design-system/react";
+import { FilterSearch } from "@/ui/FilterSearch";
 import { MultiSelectFilter } from "@/ui/MultiSelectFilter";
 import type { Completeness } from "./lib/compliance";
-import { COMPANIES } from "./lib/organization";
 import { COMPLETENESS_LABELS } from "./CompletenessBadge";
+import { CompanyFilter } from "./CompanyFilter";
 
 /**
  * Narrowing the rail: by name, by company and by how much is in.
@@ -29,19 +30,10 @@ const STATE_OPTIONS = STATE_ORDER.map((key) => ({
   label: COMPLETENESS_LABELS[key].text,
 }));
 
-const COMPANY_OPTIONS = COMPANIES.map((company) => ({
-  value: company.id,
-  label: company.name,
-}));
-
 const styles = {
   root: "flex flex-1 flex-wrap items-center gap-2",
   // Every control at 32px: the DS Input is h-10 and Button triggers are h-8.
   field: "h-8 w-48",
-  searchWrapper: "relative w-48",
-  searchIcon:
-    "pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground",
-  searchInput: "h-8 w-full pl-9",
   clearIcon: "h-4 w-4",
 };
 
@@ -69,26 +61,13 @@ export function OperationFilters({
 }: OperationFiltersProps) {
   return (
     <div className={styles.root}>
-      <div className={styles.searchWrapper}>
-        <Search className={styles.searchIcon} aria-hidden />
-        <Input
-          placeholder="Buscar operación"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          className={styles.searchInput}
-          aria-label="Buscar operación"
-        />
-      </div>
+      <FilterSearch
+        value={query}
+        onChange={onQueryChange}
+        placeholder="Buscar operación"
+      />
 
-      <div className={styles.field}>
-        <MultiSelectFilter
-          options={COMPANY_OPTIONS}
-          value={companies}
-          onValueChange={onCompaniesChange}
-          placeholder="Compañía"
-          selectAllLabel="Todas las compañías"
-        />
-      </div>
+      <CompanyFilter value={companies} onChange={onCompaniesChange} />
 
       <div className={styles.field}>
         <MultiSelectFilter

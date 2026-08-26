@@ -4,21 +4,24 @@ import { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
 import {
   Card,
+  NoDataMessage,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
+import { useCoordinationFilters, useSelectedPeriod } from "./lib/filters";
 import {
   historyOf,
   progressOf,
   responsiblesOf,
   weekSummary,
 } from "./lib/compliance";
-import { COMPANIES, OPERATIONS } from "./lib/organization";
-import { allWeeks, periodOf } from "./lib/periods";
-import { Answer } from "./Answer";
+import { getCompany, OPERATIONS } from "./lib/organization";
+import { allWeeks } from "./lib/periods";
+import { CoordinationFilters } from "./CoordinationFilters";
+import { WeekSummaryInline } from "./WeekSummaryInline";
 import { WeekStrip } from "./WeekStrip";
 import { StripLegend } from "./StripLegend";
 
@@ -29,32 +32,49 @@ import { StripLegend } from "./StripLegend";
  * from an operation with two weeks of history and from one with forty are 100%
  * and 5%. Presented the same way, the order points at whichever has the least
  * data, which is precisely the one we know least about.
+ *
+ * It opens the way the capture screen does — a filter bar with the week summary
+ * beside it — because both are the same job seen from two sides, and the week
+ * the summary names is the column the strip highlights.
  */
 
 const styles = {
-  page: "flex flex-col gap-6",
-  header: "flex flex-col gap-3",
+  page: "flex flex-col gap-5",
+  controls: "flex flex-wrap items-center gap-3",
   table: "overflow-hidden p-0 shadow-none",
   scroller: "overflow-x-auto",
   row: "flex items-center gap-4 border-b px-4 py-2.5 last:border-b-0",
   identity: "sticky left-0 z-10 flex w-56 shrink-0 flex-col bg-background pr-2",
   name: "flex items-center gap-1.5 truncate text-sm font-medium leading-tight",
   gap: "h-3.5 w-3.5 shrink-0 text-destructive-warm",
-  territory: "truncate text-xs text-muted-foreground",
+  context: "truncate text-xs text-muted-foreground",
   strip: "shrink-0",
   balance: "w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground",
-  ruler: "flex items-center gap-4 border-b bg-muted/40 px-4 py-2",
+  ruler: "flex items-center gap-4 border-b bg-muted/70 px-4 py-2",
   rulerGap: "w-56 shrink-0",
   rulerAxis: "flex shrink-0 gap-[2px]",
   rulerTick:
     "w-[9px] shrink-0 text-center text-[0.5625rem] tabular-nums text-muted-foreground",
+  legend: "px-4 py-3",
+  empty: "py-10",
 };
 
 export function ComplianceTable() {
   const state = useStore();
   const now = useNow();
-  const period = periodOf(now);
+  const { period, setPeriod } = useSelectedPeriod(now);
   const weeks = useMemo(() => allWeeks(period.year), [period.year]);
+
+  const {
+    query,
+    setQuery,
+    companies,
+    setCompanies,
+    unassignedOnly,
+    setUnassignedOnly,
+    clear,
+    active,
+  } = useCoordinationFilters();
 
   const rows = OPERATIONS.map((operation) => {
     const cells = weeks.map((p) => ({
@@ -71,66 +91,117 @@ export function ComplianceTable() {
     };
   }).sort((a, b) => a.ratio - b.ratio);
 
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (unassignedOnly && !row.unassigned) return false;
+      if (
+        companies.length > 0 &&
+        !companies.includes(row.operation.companyId)
+      ) {
+        return false;
+      }
+      return !term || row.operation.name.toLowerCase().includes(term);
+    });
+  }, [rows, query, companies, unassignedOnly]);
+
   const summary = weekSummary(state, period, now);
-  const percent = Math.round((summary.delivered / summary.expected) * 100);
-  const missing = summary.expected - summary.delivered;
+  const reported = OPERATIONS.filter(
+    (o) => progressOf(state, o.id, period, now).delivered === 11,
+  ).length;
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <Answer
-          sentence={`La semana ${period.week} va al ${percent}%. Faltan ${missing} envíos en ${summary.pendingOperations} operaciones.`}
-          support={`${OPERATIONS.length} operaciones · ${COMPANIES.length} compañías · ${summary.unassignedOperations} sin responsable asignado`}
+      <div className={styles.controls}>
+        <CoordinationFilters
+          query={query}
+          onQueryChange={setQuery}
+          companies={companies}
+          onCompaniesChange={setCompanies}
+          unassignedOnly={unassignedOnly}
+          onUnassignedOnlyChange={setUnassignedOnly}
+          onClear={clear}
+          active={active}
         />
-        <StripLegend />
+        {/* Counts the whole division, never the filtered view: it answers how
+            the week is going, not how the table happens to be narrowed. */}
+        <WeekSummaryInline
+          period={period}
+          onPeriodChange={setPeriod}
+          now={now}
+          complete={reported}
+          total={OPERATIONS.length}
+        />
       </div>
 
       <Card className={styles.table}>
-        <div className={styles.scroller}>
-          <div className={styles.ruler}>
-            <span className={styles.rulerGap} />
-            <div className={styles.rulerAxis}>
-              {weeks.map((p) => (
-                <span key={p.week} className={styles.rulerTick}>
-                  {p.week % 5 === 0 ? p.week : ""}
-                </span>
+        {visible.length === 0 ? (
+          <div className={styles.empty}>
+            <NoDataMessage
+              title="Ninguna operación coincide"
+              message="Prueba con otro nombre, otra compañía o apaga el filtro de sin responsable."
+            />
+          </div>
+        ) : (
+          <>
+            <div className={styles.scroller}>
+              <div className={styles.ruler}>
+                <span className={styles.rulerGap} />
+                <div className={styles.rulerAxis}>
+                  {weeks.map((p) => (
+                    <span key={p.week} className={styles.rulerTick}>
+                      {p.week % 5 === 0 ? p.week : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {visible.map((row) => (
+                <div key={row.operation.id} className={styles.row}>
+                  <div className={styles.identity}>
+                    <span className={styles.name}>
+                      {row.unassigned ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertTriangle className={styles.gap} />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Nadie tiene asignada esta operación. Se le sigue
+                            pidiendo igual.
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                      {row.operation.name}
+                    </span>
+                    <span className={styles.context}>
+                      {getCompany(row.operation.companyId)?.name} ·{" "}
+                      {row.operation.territory}
+                    </span>
+                  </div>
+
+                  <div className={styles.strip}>
+                    <WeekStrip weeks={row.cells} currentWeek={period.week} />
+                  </div>
+
+                  <span className={styles.balance}>
+                    {row.history.complete} de {row.history.required}
+                  </span>
+                </div>
               ))}
             </div>
-          </div>
 
-          {rows.map((row) => (
-            <div key={row.operation.id} className={styles.row}>
-              <div className={styles.identity}>
-                <span className={styles.name}>
-                  {row.unassigned ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertTriangle className={styles.gap} />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Nadie tiene asignada esta operación. Se le sigue pidiendo
-                        igual.
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                  {row.operation.name}
-                </span>
-                <span className={styles.territory}>
-                  {row.operation.territory}
-                </span>
-              </div>
-
-              <div className={styles.strip}>
-                <WeekStrip weeks={row.cells} currentWeek={period.week} />
-              </div>
-
-              <span className={styles.balance}>
-                {row.history.complete} de {row.history.required}
-              </span>
+            <div className={styles.legend}>
+              <StripLegend />
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </Card>
+
+      <p className={styles.context}>
+        {summary.unassignedOperations === 0
+          ? "Todas las operaciones tienen quien las entregue."
+          : `${summary.unassignedOperations} operaciones no tienen quien las entregue. Se les sigue pidiendo igual.`}
+      </p>
     </div>
   );
 }
