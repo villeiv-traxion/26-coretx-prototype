@@ -55,13 +55,9 @@ export function DemoOptions() {
 
   function onProfileChange(next: string) {
     setProfile(next as Profile);
-    // The two views share no routes: staying put would mean staying on a screen
-    // the new profile cannot see.
-    router.push(
-      next === "coordination"
-        ? "/intelligence/capture/compliance"
-        : "/intelligence/capture",
-    );
+    // Both profiles live at the app root and it renders whichever screen the
+    // profile is allowed. Coming back from an operation is the only jump left.
+    router.push("/intelligence/capture");
   }
 
   return (

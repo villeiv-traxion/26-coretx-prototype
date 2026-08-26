@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, TriangleAlert, UserPen } from "lucide-react";
 import {
   Button,
   Command,
@@ -38,6 +38,10 @@ const ADVISED_MAXIMUM = 3;
 
 const styles = {
   trigger: "h-8 px-3 text-xs",
+  // Icon only, for a table cell where the name beside it already says what
+  // would be changed.
+  iconTrigger: "h-7 w-7 shrink-0 p-0",
+  triggerIcon: "h-3.5 w-3.5",
   content: "sm:max-w-md",
   search: "rounded-md border",
   list: "max-h-64",
@@ -53,7 +57,16 @@ const styles = {
   warningIcon: "mt-0.5 h-3.5 w-3.5 shrink-0",
 };
 
-export function AssignmentDialog({ operation }: { operation: Operation }) {
+interface AssignmentDialogProps {
+  operation: Operation;
+  /** Icon-only trigger, for use inside a row that already names the person. */
+  compact?: boolean;
+}
+
+export function AssignmentDialog({
+  operation,
+  compact = false,
+}: AssignmentDialogProps) {
   const state = useStore();
   const { assign } = useActions();
   const [open, setOpen] = useState(false);
@@ -83,9 +96,19 @@ export function AssignmentDialog({ operation }: { operation: Operation }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className={styles.trigger}>
-          {assigned.length === 0 ? "Asignar" : "Cambiar"}
-        </Button>
+        {compact ? (
+          <Button
+            variant="outline"
+            className={styles.iconTrigger}
+            aria-label={`Cambiar responsable de ${operation.name}`}
+          >
+            <UserPen className={styles.triggerIcon} />
+          </Button>
+        ) : (
+          <Button variant="outline" className={styles.trigger}>
+            {assigned.length === 0 ? "Asignar" : "Cambiar"}
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className={styles.content}>

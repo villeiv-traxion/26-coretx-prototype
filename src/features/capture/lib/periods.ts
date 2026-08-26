@@ -76,12 +76,24 @@ export function isFuture(period: Period, now: Date): boolean {
   return now.getTime() < startOf(period).getTime();
 }
 
-/** Every week of the year, elapsed or not. This is the axis of the 52. */
+/** Every week of the year, elapsed or not. */
 export function allWeeks(year: number): Period[] {
   return Array.from({ length: weeksIn(year) }, (_, i) => ({
     year,
     week: i + 1,
   }));
+}
+
+/**
+ * Week 1 up to and including the one `now` falls in.
+ *
+ * The axis of the compliance table. Weeks that have not started owe nothing, so
+ * a column for them is a column of dots — width spent saying that the future
+ * has not happened.
+ */
+export function elapsedWeeks(now: Date): Period[] {
+  const { year, week } = periodOf(now);
+  return Array.from({ length: week }, (_, i) => ({ year, week: i + 1 }));
 }
 
 export function previousPeriod({ year, week }: Period): Period {

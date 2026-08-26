@@ -17,12 +17,6 @@ import { getOperation } from "./lib/organization";
 const ROOT = "/intelligence/capture";
 const OPERATION_PREFIX = `${ROOT}/operation/`;
 
-/** Las hojas fijas: ruta exacta → cómo se llama esa pantalla. */
-const LEAVES: Record<string, string> = {
-  [`${ROOT}/compliance`]: "Cumplimiento",
-  [`${ROOT}/responsibles`]: "Responsables",
-};
-
 function trailFor(pathname: string): BreadcrumbItem[] {
   const home: BreadcrumbItem = { label: "Inicio", href: "/", icon: House };
   // El eje no tiene pantalla propia todavía: se nombra, no se enlaza.
@@ -31,9 +25,6 @@ function trailFor(pathname: string): BreadcrumbItem[] {
   if (pathname === ROOT) return [home, axis, { label: "CoreTX Captura" }];
 
   const app: BreadcrumbItem = { label: "CoreTX Captura", href: ROOT };
-
-  const leaf = LEAVES[pathname];
-  if (leaf) return [home, axis, app, { label: leaf }];
 
   const operationId = pathname.startsWith(OPERATION_PREFIX)
     ? pathname.slice(OPERATION_PREFIX.length)
