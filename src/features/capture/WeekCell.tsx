@@ -13,10 +13,14 @@ import type { Period } from "./lib/periods";
  * A week nobody was asked for is a dot, not a zero. Painting it as a breach
  * would invent a failure that never happened.
  *
- * The week in progress is grey whatever it holds. Nothing is late before the
- * cutoff, and grading it would accuse whoever still has until Friday — which is
- * the one place this parts company with the reference prototype, whose grid
- * grades every week the same way.
+ * The week in progress is grey while it is unfinished. Nothing is late before
+ * the cutoff, and grading it would accuse whoever still has until Friday — the
+ * one place this parts company with the reference prototype, whose grid grades
+ * every week the same way.
+ *
+ * Finished is the exception: eleven of eleven reads as done whether or not
+ * Friday has come. Waiting for the cutoff to say so would withhold the only
+ * good news the row has.
  */
 
 const styles = {
@@ -38,8 +42,8 @@ interface WeekCellProps {
 
 function toneOf(progress: WeekProgress): string {
   const { delivered, total } = progress;
-  if (!progress.closed) return styles.open;
   if (total === 0 || delivered >= total) return styles.complete;
+  if (!progress.closed) return styles.open;
   // The same threshold the bad-week count uses, so a cell painted as fine is
   // never one of the weeks counted against the operation beside it.
   return delivered / total >= NEARLY_COMPLETE ? styles.nearly : styles.short;

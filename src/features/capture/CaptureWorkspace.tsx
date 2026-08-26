@@ -157,6 +157,7 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
             <CaptureForm
               key={`${selectedId}|${periodKey(period)}`}
               operationId={selectedId}
+              period={period}
             />
           ) : null}
         </div>

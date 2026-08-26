@@ -27,6 +27,7 @@ import { periodOf, rangeInWords, type Period } from "./lib/periods";
 import { AssignmentDialog } from "./AssignmentDialog";
 import { CoordinationFilters } from "./CoordinationFilters";
 import { WeekCell } from "./WeekCell";
+import { RemindButton } from "./RemindButton";
 
 /**
  * Delivery by week: one row per operation, ten weeks at a time.
@@ -77,6 +78,8 @@ const styles = {
   badDot: "h-1.5 w-1.5 shrink-0 rounded-full",
   weekHead: "text-center",
   weekCell: "px-1 text-center",
+  remindCell: "text-right",
+  srOnly: "sr-only",
   // The name is the control. A column of twenty-four identical buttons said
   // the same thing twenty-four times; clicking who is responsible to change who
   // is responsible needs no label at all. The underline on hover is what makes
@@ -216,6 +219,10 @@ export function ComplianceTable() {
   const first = weeks[0];
   const last = weeks[weeks.length - 1];
 
+  // The column only makes sense while the open week is on screen: paging back
+  // through the year is history, and nobody can be reminded about last March.
+  const showRemind = last.week === current.week;
+
   return (
     <div className={styles.page}>
       <CoordinationFilters
@@ -284,6 +291,11 @@ export function ComplianceTable() {
                     S{week.week}
                   </TableHead>
                 ))}
+                {showRemind ? (
+                  <TableHead className={styles.remindCell}>
+                    <span className={styles.srOnly}>Recordar</span>
+                  </TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,6 +354,17 @@ export function ComplianceTable() {
                       <WeekCell period={cell.period} progress={cell.progress} />
                     </TableCell>
                   ))}
+
+                  {showRemind ? (
+                    <TableCell className={styles.remindCell}>
+                      <RemindButton
+                        operation={row.operation}
+                        period={last}
+                        progress={row.cells[row.cells.length - 1].progress}
+                        assigned={row.assigned}
+                      />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

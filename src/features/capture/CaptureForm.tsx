@@ -15,10 +15,14 @@ import type { Values } from "./lib/formulas";
 import { check, isComplete } from "./lib/rules";
 import { useActions, useStore } from "./lib/store";
 import { useNow } from "./lib/now";
-import { useSelectedPeriod } from "./lib/filters";
 import { completenessOf, valuesFor } from "./lib/compliance";
 import { getCompany, getOperation } from "./lib/organization";
-import { cutoffInWords, isClosed, rangeInWords } from "./lib/periods";
+import {
+  cutoffInWords,
+  isClosed,
+  rangeInWords,
+  type Period,
+} from "./lib/periods";
 import { IndicatorBlock } from "./IndicatorBlock";
 import { CompletenessBadge } from "./CompletenessBadge";
 
@@ -55,12 +59,20 @@ const styles = {
   fraction: "shrink-0 text-sm tabular-nums",
 };
 
-export function CaptureForm({ operationId }: { operationId: string }) {
+interface CaptureFormProps {
+  operationId: string;
+  /**
+   * Which week to show. A prop and not a read of the URL: the compliance table
+   * opens a cell whose week has nothing to do with the one in the address bar.
+   */
+  period: Period;
+}
+
+export function CaptureForm({ operationId, period }: CaptureFormProps) {
   const state = useStore();
   const now = useNow();
   const { save } = useActions();
 
-  const { period } = useSelectedPeriod(now);
   const closed = isClosed(period, now);
 
   const operation = getOperation(operationId);
