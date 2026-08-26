@@ -8,8 +8,7 @@ import { useNow } from "./lib/now";
 import { completenessOf, operationsOf, progressOf } from "./lib/compliance";
 import { useOperationFilters } from "./lib/filters";
 import { periodOf } from "./lib/periods";
-import { getUser } from "./lib/organization";
-import { WeekHeader } from "./WeekHeader";
+import { WeekSummaryInline } from "./WeekSummaryInline";
 import { OperationFilters } from "./OperationFilters";
 import { OperationList } from "./OperationList";
 import { CaptureForm } from "./CaptureForm";
@@ -36,6 +35,9 @@ import { CaptureForm } from "./CaptureForm";
 
 const styles = {
   page: "flex flex-col gap-5",
+  // Filters take the slack, the week summary keeps its width and drops to a
+  // line of its own when the two no longer fit.
+  controls: "flex flex-wrap items-center gap-3",
   /**
    * No `overflow-hidden` here, deliberately. Clipping would make this card the
    * scroll container for the sticky rail inside it, and a sticky element whose
@@ -63,7 +65,6 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
   const now = useNow();
   const period = periodOf(now);
 
-  const user = getUser(state.userId);
   const rows = operationsOf(state, state.userId)
     .map((operation) => ({
       operation,
@@ -103,25 +104,22 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
 
   return (
     <div className={styles.page}>
-      {/* Counts the whole week and never the filtered view: it answers how you
-          are doing, not how the rail happens to be narrowed. */}
-      <WeekHeader
-        now={now}
-        complete={complete}
-        total={rows.length}
-        userName={user?.name ?? ""}
-      />
-
-      <OperationFilters
-        query={query}
-        onQueryChange={setQuery}
-        companies={companies}
-        onCompaniesChange={setCompanies}
-        states={states}
-        onStatesChange={setStates}
-        onClear={clear}
-        active={filtering}
-      />
+      {/* The week summary counts the whole week and never the filtered view:
+          it answers how you are doing, not how the rail happens to be
+          narrowed. */}
+      <div className={styles.controls}>
+        <OperationFilters
+          query={query}
+          onQueryChange={setQuery}
+          companies={companies}
+          onCompaniesChange={setCompanies}
+          states={states}
+          onStatesChange={setStates}
+          onClear={clear}
+          active={filtering}
+        />
+        <WeekSummaryInline now={now} complete={complete} total={rows.length} />
+      </div>
 
       <Card className={styles.surface}>
         <div className={selectedId ? styles.railHidden : styles.rail}>
