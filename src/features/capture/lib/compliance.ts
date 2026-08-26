@@ -37,6 +37,29 @@ export interface WeekProgress {
 
 export const PER_WEEK_TOTAL = INDICATORS.length;
 
+/**
+ * At or above this share of the week, the shortfall stops counting as one.
+ *
+ * «Ten of eleven» is not a bad week, and a screen that says so in one column
+ * while painting it as fine in the next teaches nobody anything. The reference
+ * prototype draws the same line — its bad-week count takes «parcial» and
+ * «nada» and leaves out «casi».
+ *
+ * `0.8` is a design decision, not a figure from the data. The source says so in
+ * as many words: «UMBRAL_DE_CASI = 0.8 y MOVIMIENTO_MINIMO = 0.005 son
+ * decisiones de diseño, no datos».
+ */
+export const NEARLY_COMPLETE = 0.8;
+
+/**
+ * A week that closed meaningfully short. The open week is never one: nothing is
+ * late before the cutoff.
+ */
+export function isShortfall({ delivered, total, closed }: WeekProgress): boolean {
+  if (!closed || total === 0) return false;
+  return delivered / total < NEARLY_COMPLETE;
+}
+
 /** How much of a week is in, on one axis. Drives both the badge and the filter. */
 export type Completeness = "PENDING" | "PARTIAL" | "COMPLETE";
 

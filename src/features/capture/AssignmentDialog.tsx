@@ -37,10 +37,7 @@ import { useActions, useStore } from "./lib/store";
 const ADVISED_MAXIMUM = 3;
 
 const styles = {
-  trigger: "h-8 px-3 text-xs",
-  // Icon only, for a table cell where the name beside it already says what
-  // would be changed.
-  iconTrigger: "h-7 w-7 shrink-0 p-0",
+  trigger: "h-7 gap-1.5 whitespace-nowrap px-2.5 text-xs",
   triggerIcon: "h-3.5 w-3.5",
   content: "sm:max-w-md",
   search: "rounded-md border",
@@ -59,13 +56,17 @@ const styles = {
 
 interface AssignmentDialogProps {
   operation: Operation;
-  /** Icon-only trigger, for use inside a row that already names the person. */
-  compact?: boolean;
+  /**
+   * What opens it. Given one, it replaces the default button — the compliance
+   * table hands it the responsible's own name, so the thing you would change is
+   * the thing you click.
+   */
+  children?: React.ReactNode;
 }
 
 export function AssignmentDialog({
   operation,
-  compact = false,
+  children,
 }: AssignmentDialogProps) {
   const state = useStore();
   const { assign } = useActions();
@@ -96,26 +97,21 @@ export function AssignmentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        {compact ? (
-          <Button
-            variant="outline"
-            className={styles.iconTrigger}
-            aria-label={`Cambiar responsable de ${operation.name}`}
-          >
-            <UserPen className={styles.triggerIcon} />
-          </Button>
-        ) : (
+        {children ?? (
           <Button variant="outline" className={styles.trigger}>
-            {assigned.length === 0 ? "Asignar" : "Cambiar"}
+            <UserPen className={styles.triggerIcon} />
+            {assigned.length === 0 ? "Asignar" : "Cambiar"} responsable
           </Button>
         )}
       </DialogTrigger>
 
       <DialogContent className={styles.content}>
         <DialogHeader>
-          <DialogTitle>{operation.name}</DialogTitle>
+          <DialogTitle>Asignar responsables</DialogTitle>
+          {/* The operation moves into the description: the title says what the
+              dialog does, and the sentence below says what it will do it to. */}
           <DialogDescription>
-            Quién entrega los once indicadores de esta operación cada semana.
+            Quién entrega los once indicadores de {operation.name} cada semana.
           </DialogDescription>
         </DialogHeader>
 

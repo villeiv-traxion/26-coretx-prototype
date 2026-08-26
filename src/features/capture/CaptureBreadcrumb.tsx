@@ -16,6 +16,7 @@ import { getOperation } from "./lib/organization";
 
 const ROOT = "/intelligence/capture";
 const OPERATION_PREFIX = `${ROOT}/operation/`;
+const COMPLIANCE = `${ROOT}/compliance`;
 
 function trailFor(pathname: string): BreadcrumbItem[] {
   const home: BreadcrumbItem = { label: "Inicio", href: "/", icon: House };
@@ -25,6 +26,10 @@ function trailFor(pathname: string): BreadcrumbItem[] {
   if (pathname === ROOT) return [home, axis, { label: "CoreTX Captura" }];
 
   const app: BreadcrumbItem = { label: "CoreTX Captura", href: ROOT };
+
+  if (pathname === COMPLIANCE) {
+    return [home, axis, app, { label: "Cumplimiento" }];
+  }
 
   const operationId = pathname.startsWith(OPERATION_PREFIX)
     ? pathname.slice(OPERATION_PREFIX.length)

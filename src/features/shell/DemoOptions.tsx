@@ -55,9 +55,13 @@ export function DemoOptions() {
 
   function onProfileChange(next: string) {
     setProfile(next as Profile);
-    // Both profiles live at the app root and it renders whichever screen the
-    // profile is allowed. Coming back from an operation is the only jump left.
-    router.push("/intelligence/capture");
+    // Each profile has its own screen, so switching has to move as well as
+    // change: staying put would leave you on one the new profile cannot use.
+    router.push(
+      next === "coordination"
+        ? "/intelligence/capture/compliance"
+        : "/intelligence/capture",
+    );
   }
 
   return (

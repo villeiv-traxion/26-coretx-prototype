@@ -1,6 +1,6 @@
 "use client";
 
-import type { WeekProgress } from "./lib/compliance";
+import { NEARLY_COMPLETE, type WeekProgress } from "./lib/compliance";
 import type { Period } from "./lib/periods";
 
 /**
@@ -13,19 +13,21 @@ import type { Period } from "./lib/periods";
  * A week nobody was asked for is a dot, not a zero. Painting it as a breach
  * would invent a failure that never happened.
  *
- * The tones are the ones the reference prototype uses: primary for a week that
- * closed, warm for one that fell short, destructive for one that never
- * reported. An open week that is merely unfinished stays grey — nothing is late
- * until the cutoff, and colouring it would accuse whoever still has until
- * Friday.
+ * The week in progress is grey whatever it holds. Nothing is late before the
+ * cutoff, and grading it would accuse whoever still has until Friday — which is
+ * the one place this parts company with the reference prototype, whose grid
+ * grades every week the same way.
  */
 
 const styles = {
-  chip: "inline-flex h-6 w-10 items-center justify-center rounded text-[0.6875rem] tabular-nums",
-  complete: "bg-primary/25 text-primary-foreground",
-  open: "text-muted-foreground",
-  short: "bg-destructive-warm/15 text-destructive-warm",
-  none: "bg-destructive/15 text-destructive",
+  chip: "inline-flex h-7 w-12 items-center justify-center rounded text-xs tabular-nums",
+  complete: "bg-primary/35 text-primary-foreground",
+  nearly: "bg-primary/10 text-primary-foreground",
+  // One red for everything under the threshold. Whether it was seven of eleven
+  // or none of them is what the figure inside the cell is for; a second hue
+  // only asked the eye to carry what the number already says.
+  short: "bg-destructive/15 text-destructive",
+  open: "bg-muted text-muted-foreground",
   future: "text-muted-foreground",
 };
 
@@ -35,9 +37,12 @@ interface WeekCellProps {
 }
 
 function toneOf(progress: WeekProgress): string {
-  if (progress.delivered === progress.total) return styles.complete;
+  const { delivered, total } = progress;
   if (!progress.closed) return styles.open;
-  return progress.delivered === 0 ? styles.none : styles.short;
+  if (total === 0 || delivered >= total) return styles.complete;
+  // The same threshold the bad-week count uses, so a cell painted as fine is
+  // never one of the weeks counted against the operation beside it.
+  return delivered / total >= NEARLY_COMPLETE ? styles.nearly : styles.short;
 }
 
 export function WeekCell({ period, progress }: WeekCellProps) {

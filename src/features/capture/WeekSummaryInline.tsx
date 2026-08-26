@@ -2,12 +2,7 @@
 
 import { Clock, Lock } from "lucide-react";
 import { Separator } from "@traxion-global/design-system/react";
-import {
-  cutoffOf,
-  isClosed,
-  timeLeft,
-  type Period,
-} from "./lib/periods";
+import { cutoffOf, isClosed, timeLeft, type Period } from "./lib/periods";
 import { WeekPicker } from "./WeekPicker";
 
 /**
@@ -16,9 +11,10 @@ import { WeekPicker } from "./WeekPicker";
  * a progress bar and a row of chips — the room that took was worth more to the
  * work below it than the phrasing was.
  *
- * The week is not a label but a control: reaching back a week or two to check
- * what was delivered is the other thing people come here to do, and this is the
- * only place on the screen that names the week at all.
+ * The week is a control: reaching back a week or two — to check what was
+ * delivered, or to correct it while the window is still open — is the other
+ * thing people come here to do, and this is the only place on the screen that
+ * names the week at all.
  *
  * The countdown still turns warm inside the last day. That is the one thing the
  * short version cannot afford to lose.

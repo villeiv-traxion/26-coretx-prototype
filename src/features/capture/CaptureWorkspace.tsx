@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { MousePointerClick } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
 import { completenessOf, operationsOf, progressOf } from "./lib/compliance";
-import { useOperationFilters, useSelectedPeriod } from "./lib/filters";
+import {
+  useFilterSearch,
+  useOperationFilters,
+  useSelectedPeriod,
+} from "./lib/filters";
 import { periodKey } from "./lib/periods";
 import { WeekSummaryInline } from "./WeekSummaryInline";
 import { OperationFilters } from "./OperationFilters";
@@ -31,6 +35,11 @@ import { CaptureForm } from "./CaptureForm";
  *
  * Below `lg` there is only ever one pane: the rail until you pick something,
  * the form afterwards. Two columns on a phone is neither of them.
+ *
+ * Arriving with nothing selected opens the first operation of the rail rather
+ * than an invitation to pick one. Whoever comes here came to capture, and half
+ * of them only have one operation anyway — a screen whose whole content is
+ * «choose something» spends a click on a decision that makes itself.
  */
 
 const styles = {
@@ -51,13 +60,9 @@ const styles = {
   railHidden: "hidden rounded-xl bg-muted lg:block lg:rounded-r-none",
   // Both columns carry their own rounding: without the card clipping them, a
   // square-cornered background would run straight over its rounded border.
-  panel: "min-w-0 rounded-xl bg-background p-4 sm:p-5 lg:rounded-l-none",
+  panel: "min-w-0 rounded-xl bg-background p-7 sm:p-8 lg:rounded-l-none",
   panelHidden:
-    "hidden min-w-0 rounded-xl bg-background p-4 sm:p-5 lg:block lg:rounded-l-none",
-  placeholder:
-    "flex flex-col items-center justify-center gap-3 px-6 py-24 text-center",
-  placeholderIcon: "h-6 w-6 text-muted-foreground",
-  placeholderText: "max-w-xs text-sm text-muted-foreground",
+    "hidden min-w-0 rounded-xl bg-background p-7 sm:p-8 lg:block lg:rounded-l-none",
 };
 
 export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
@@ -102,6 +107,17 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
     });
   }, [rows, query, companies, states]);
 
+  const router = useRouter();
+  const search = useFilterSearch();
+  const firstId = visible[0]?.operation.id;
+
+  // `replace`, not `push`: the bare root is a step nobody chose, and leaving it
+  // in the history would make Back bounce off it straight back to here.
+  useEffect(() => {
+    if (selectedId || !firstId) return;
+    router.replace(`/intelligence/capture/operation/${firstId}${search}`);
+  }, [selectedId, firstId, search, router]);
+
   return (
     <div className={styles.page}>
       {/* The week summary counts the whole week and never the filtered view:
@@ -138,22 +154,11 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
 
         <div className={selectedId ? styles.panel : styles.panelHidden}>
           {selectedId ? (
-            // Remounts on a change of week too: the draft belongs to one
-            // operation in one week, and carrying it across would offer last
-            // week’s numbers as this week’s.
             <CaptureForm
               key={`${selectedId}|${periodKey(period)}`}
               operationId={selectedId}
             />
-          ) : (
-            <div className={styles.placeholder}>
-              <MousePointerClick className={styles.placeholderIcon} />
-              <p className={styles.placeholderText}>
-                Elige una operación de la izquierda para capturar sus once
-                indicadores de esta semana.
-              </p>
-            </div>
-          )}
+          ) : null}
         </div>
       </Card>
     </div>

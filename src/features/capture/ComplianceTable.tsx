@@ -1,80 +1,131 @@
 "use client";
 
 import { useMemo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  DataTable,
-  DataTableContent,
-  DataTablePagination,
+  Button,
+  Card,
   NoDataMessage,
-  useDataTable,
-  type ColumnDef,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
 import { useCoordinationFilters, useSelectedPeriod } from "./lib/filters";
 import {
+  isShortfall,
   progressOf,
   responsiblesOf,
   weekSummary,
-  type WeekProgress,
 } from "./lib/compliance";
-import {
-  getCompany,
-  getUser,
-  OPERATIONS,
-  type Operation,
-} from "./lib/organization";
-import { elapsedWeeks, periodKey, type Period } from "./lib/periods";
+import { getCompany, getUser, OPERATIONS } from "./lib/organization";
+import { periodOf, rangeInWords, type Period } from "./lib/periods";
 import { AssignmentDialog } from "./AssignmentDialog";
 import { CoordinationFilters } from "./CoordinationFilters";
-import { WeekSummaryInline } from "./WeekSummaryInline";
 import { WeekCell } from "./WeekCell";
 
 /**
- * Delivery by week: one row per operation, one column per elapsed week.
+ * Delivery by week: one row per operation, ten weeks at a time.
  *
- * The year so far is on screen and the table scrolls sideways through it, with
- * **operation and responsible pinned to the left edge** so a cell in week 30
- * never becomes an anonymous number. That is what makes thirty-odd columns
- * usable, and it is why this is the design system `DataTable` rather than the
- * plain `Table`: pinning is its feature, declared per column.
+ * A window rather than the whole year. Fifty-two columns only fit by scrolling
+ * sideways, and a horizontal scrollbar under a wide table costs more than it
+ * gives: the identity columns had to be pinned to survive it, the pinning
+ * needed the heavier `DataTable`, and even then a cell halfway across belonged
+ * to a header nobody could see. Ten columns fit outright, so this is the plain
+ * `Table` and moving through the year is two buttons.
+ *
+ * The window ends on the week the summary names, so the two controls are one
+ * piece of state: the last column is always the week being reported on.
  *
  * The order puts the worst proportion first, with **enough history first**: two
- * bad weeks out of two and two out of forty are 100% and 5%, and ordering by
- * the two would point at whichever operation we know least about.
+ * bad weeks out of two and two out of ten are 100% and 20%, and ordering by the
+ * two would point at whichever operation we know least about.
  */
 
-interface ComplianceRow {
-  operation: Operation;
-  assigned: string[];
-  unassigned: boolean;
-  byWeek: Map<string, { period: Period; progress: WeekProgress }>;
-  bad: number;
-  asked: number;
-}
-
-/** Wide enough that the year overflows any screen, which is what pinning needs. */
-const NAME_WIDTH = 220;
-const RESPONSIBLE_WIDTH = 190;
-const WEEK_WIDTH = 58;
+/** Ten fits a laptop without scrolling and still shows a run of behaviour. */
+const WINDOW = 10;
 
 const styles = {
   page: "flex flex-col gap-5",
-  controls: "flex flex-wrap items-center gap-3",
-  name: "truncate font-medium",
-  context: "truncate text-xs font-normal text-muted-foreground",
+  card: "overflow-hidden p-0 shadow-none",
+  pager:
+    "flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5",
+  pagerLabel: "text-xs text-muted-foreground",
+  pagerRange: "font-medium tabular-nums text-foreground",
+  pagerButtons: "flex items-center gap-1",
+  pagerButton: "h-7 w-7 p-0",
+  pagerIcon: "h-4 w-4",
+  name: "block truncate font-medium",
+  company: "block truncate text-sm font-normal",
+  // «Territorio» is what the master data calls it, so that is what it is called
+  // here. It only exists for the SID companies — derived from the suffixes of
+  // their operation names — and is blank everywhere else rather than invented.
+  territory: "text-xs font-normal tabular-nums text-muted-foreground",
+  // With a denominator, always. «2» alone cannot be compared between an
+  // operation with two weeks of history and one with ten, and the table is
+  // ordered by exactly that proportion.
+  badHead: "whitespace-nowrap text-center",
+  badCell: "text-center",
+  // A dot carries the severity and the figure stays plain: colouring the text
+  // itself made the same number look like two different numbers depending on
+  // the row it sat in.
+  badRow: "inline-flex items-center gap-1.5 text-xs tabular-nums",
+  badDot: "h-1.5 w-1.5 shrink-0 rounded-full",
   weekHead: "text-center",
-  weekCell: "text-center",
-  responsibleRow: "flex items-center gap-2",
-  responsible: "min-w-0 truncate text-xs text-muted-foreground",
-  unassigned: "min-w-0 truncate text-xs text-destructive-warm",
+  weekCell: "px-1 text-center",
+  // The name is the control. A column of twenty-four identical buttons said
+  // the same thing twenty-four times; clicking who is responsible to change who
+  // is responsible needs no label at all. The underline on hover is what makes
+  // it findable without one.
+  responsible:
+    "block max-w-[11rem] truncate text-left text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline",
+  unassigned:
+    "block max-w-[11rem] truncate text-left text-xs text-destructive-warm underline-offset-2 hover:underline",
+  empty: "py-10",
   footnote: "text-xs leading-snug text-muted-foreground",
 };
+
+/**
+ * Where «it slipped» becomes «it fails as a habit».
+ *
+ * The dot borrows the cells' own two families rather than a traffic light of
+ * its own: primary while things are fine — solid with no bad weeks, paler with
+ * a few — and destructive once they are not. A green and an amber that appear
+ * nowhere else in the row would have been a third scale to learn.
+ *
+ * A design decision, not a figure from anywhere: nothing in the source material
+ * sets a threshold for this column — the reference prototype paints it in two
+ * states, any bad week or none. Its 0.5 belongs to a different sentence, the
+ * count of operations that «failed for real in half the weeks or more».
+ *
+ * Three in ten is Iván's call. It travels with the window: at ten weeks it is
+ * three, at four it is two.
+ */
+const CHRONIC = 0.3;
+
+function badDotClass(bad: number, asked: number): string {
+  if (bad === 0) return "bg-primary";
+  return bad / asked >= CHRONIC ? "bg-destructive" : "bg-primary/40";
+}
+
+/** The `count` weeks ending at `period`, never reaching before week 1. */
+function windowEndingAt(period: Period, count: number): Period[] {
+  const first = Math.max(1, period.week - count + 1);
+  return Array.from({ length: period.week - first + 1 }, (_, i) => ({
+    year: period.year,
+    week: first + i,
+  }));
+}
 
 export function ComplianceTable() {
   const state = useStore();
   const now = useNow();
   const { period, setPeriod } = useSelectedPeriod(now);
+  const current = periodOf(now);
 
   const {
     query,
@@ -89,39 +140,42 @@ export function ComplianceTable() {
     active,
   } = useCoordinationFilters();
 
-  // Up to the week in progress and no further: a column for a week that has
-  // not started is a column of dots.
-  const weeks = useMemo(() => elapsedWeeks(now), [now]);
+  const weeks = useMemo(() => windowEndingAt(period, WINDOW), [period]);
 
-  // Room for the whole division on one page. Coordination came to see all of
-  // it; paging twenty-four operations would only hide a third of the answer.
-  const tableState = useDataTable<ComplianceRow>({ pageSize: 30 });
+  const canGoBack = weeks[0].week > 1;
+  const canGoForward = period.week < current.week;
 
-  const rows = useMemo<ComplianceRow[]>(
+  function shift(by: number) {
+    const week = Math.min(current.week, Math.max(1, period.week + by));
+    setPeriod({ year: period.year, week });
+  }
+
+  const rows = useMemo(
     () =>
       OPERATIONS.map((operation) => {
-        const byWeek = new Map<
-          string,
-          { period: Period; progress: WeekProgress }
-        >();
-        let bad = 0;
-        let asked = 0;
-
-        for (const week of weeks) {
-          const progress = progressOf(state, operation.id, week, now);
-          byWeek.set(periodKey(week), { period: week, progress });
-          asked++;
-          if (progress.delivered < progress.total) bad++;
-        }
-
+        const cells = weeks.map((week) => ({
+          period: week,
+          progress: progressOf(state, operation.id, week, now),
+        }));
+        // The week in progress is neither counted nor blamed: nothing is late
+        // before the cutoff, and an operation that still has until Friday would
+        // otherwise carry a bad week for being mid-week. It leaves the
+        // denominator too — «2 de 10» with one week still open is «2 de 9».
+        //
+        // And a week is only bad if it fell meaningfully short: ten of eleven
+        // is painted as fine in its own cell, so counting it here would have the
+        // row contradict itself.
+        const closed = cells.filter(({ progress }) => progress.closed);
+        const bad = closed.filter(({ progress }) => isShortfall(progress)).length;
         const assigned = responsiblesOf(state, operation.id);
+
         return {
           operation,
+          cells,
+          bad,
+          asked: closed.length,
           assigned,
           unassigned: assigned.length === 0,
-          byWeek,
-          bad,
-          asked,
         };
       }),
     [state, weeks, now],
@@ -148,133 +202,155 @@ export function ComplianceTable() {
       return !term || row.operation.name.toLowerCase().includes(term);
     });
 
-    const enough = Math.ceil(weeks.length / 2);
+    const enough = Math.ceil(WINDOW / 2);
     return [...filtered].sort((a, b) => {
       const aEnough = a.asked >= enough ? 1 : 0;
       const bEnough = b.asked >= enough ? 1 : 0;
       if (aEnough !== bEnough) return bEnough - aEnough;
       return b.bad / (b.asked || 1) - a.bad / (a.asked || 1);
     });
-  }, [rows, query, companies, responsibles, unassignedOnly, weeks.length]);
-
-  const columns = useMemo<ColumnDef<ComplianceRow>[]>(
-    () => [
-      {
-        id: "operation",
-        header: "Operación",
-        size: NAME_WIDTH,
-        pin: "left",
-        enableHiding: false,
-        cell: ({ row }) => (
-          <>
-            <span className={styles.name} title={row.original.operation.name}>
-              {row.original.operation.name}
-            </span>
-            <span className={styles.context}>
-              {getCompany(row.original.operation.companyId)?.name} ·{" "}
-              {row.original.operation.territory}
-            </span>
-          </>
-        ),
-      },
-      {
-        id: "responsible",
-        header: "Responsable",
-        size: RESPONSIBLE_WIDTH,
-        pin: "left",
-        enableHiding: false,
-        cell: ({ row }) => {
-          const names = row.original.assigned
-            .map((id) => getUser(id)?.name)
-            .filter(Boolean)
-            .join(", ");
-          return (
-            <span className={styles.responsibleRow}>
-              <span
-                className={
-                  row.original.unassigned ? styles.unassigned : styles.responsible
-                }
-                title={names || "Sin asignar"}
-              >
-                {row.original.unassigned ? "Sin asignar" : names}
-              </span>
-              <AssignmentDialog operation={row.original.operation} compact />
-            </span>
-          );
-        },
-      },
-      ...weeks.map<ColumnDef<ComplianceRow>>((week) => ({
-        id: periodKey(week),
-        header: `S${week.week}`,
-        size: WEEK_WIDTH,
-        enableSorting: false,
-        cell: ({ row }) => {
-          const cell = row.original.byWeek.get(periodKey(week));
-          if (!cell) return null;
-          return (
-            <div className={styles.weekCell}>
-              <WeekCell period={cell.period} progress={cell.progress} />
-            </div>
-          );
-        },
-      })),
-    ],
-    [weeks],
-  );
+  }, [rows, query, companies, responsibles, unassignedOnly]);
 
   const summary = weekSummary(state, period, now);
-  const reported = OPERATIONS.filter(
-    (o) => progressOf(state, o.id, period, now).delivered === 11,
-  ).length;
 
-  const { pageIndex, pageSize } = tableState.pagination;
-  const page = visible.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+  const first = weeks[0];
+  const last = weeks[weeks.length - 1];
 
   return (
     <div className={styles.page}>
-      <div className={styles.controls}>
-        <CoordinationFilters
-          query={query}
-          onQueryChange={setQuery}
-          companies={companies}
-          onCompaniesChange={setCompanies}
-          responsibles={responsibles}
-          onResponsiblesChange={setResponsibles}
-          unassignedOnly={unassignedOnly}
-          onUnassignedOnlyChange={setUnassignedOnly}
-          onClear={clear}
-          active={active}
-        />
-        {/* Counts the whole division, never the filtered view: it answers how
-            the week is going, not how the table happens to be narrowed. */}
-        <WeekSummaryInline
-          period={period}
-          onPeriodChange={setPeriod}
-          now={now}
-          complete={reported}
-          total={OPERATIONS.length}
-        />
-      </div>
+      <CoordinationFilters
+        query={query}
+        onQueryChange={setQuery}
+        companies={companies}
+        onCompaniesChange={setCompanies}
+        responsibles={responsibles}
+        onResponsiblesChange={setResponsibles}
+        unassignedOnly={unassignedOnly}
+        onUnassignedOnlyChange={setUnassignedOnly}
+        onClear={clear}
+        active={active}
+      />
 
-      <DataTable
-        columns={columns}
-        data={page}
-        pageCount={Math.max(1, Math.ceil(visible.length / pageSize))}
-        emptyState={
-          <NoDataMessage
-            title="Ninguna operación coincide"
-            message="Prueba con otro nombre, otra compañía, otro responsable, o apaga el filtro de sin responsable."
-          />
-        }
-        {...tableState}
-      >
-        <DataTableContent />
-        <DataTablePagination />
-      </DataTable>
+      <Card className={styles.card}>
+        <div className={styles.pager}>
+          <span className={styles.pagerLabel}>
+            Semanas{" "}
+            <span className={styles.pagerRange}>
+              {first.week} – {last.week}
+            </span>{" "}
+            · {rangeInWords(first)} al {rangeInWords(last)}
+          </span>
+
+          <div className={styles.pagerButtons}>
+            <Button
+              variant="outline"
+              className={styles.pagerButton}
+              disabled={!canGoBack}
+              onClick={() => shift(-WINDOW)}
+              aria-label="Semanas anteriores"
+            >
+              <ChevronLeft className={styles.pagerIcon} />
+            </Button>
+            <Button
+              variant="outline"
+              className={styles.pagerButton}
+              disabled={!canGoForward}
+              onClick={() => shift(WINDOW)}
+              aria-label="Semanas siguientes"
+            >
+              <ChevronRight className={styles.pagerIcon} />
+            </Button>
+          </div>
+        </div>
+
+        {visible.length === 0 ? (
+          <div className={styles.empty}>
+            <NoDataMessage
+              title="Ninguna operación coincide"
+              message="Prueba con otro nombre, otra compañía, otro responsable, o apaga el filtro de sin responsable."
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Operación</TableHead>
+                <TableHead>Responsable</TableHead>
+                <TableHead>Compañía</TableHead>
+                <TableHead>Territorio</TableHead>
+                <TableHead className={styles.badHead}>Semanas malas</TableHead>
+                {weeks.map((week) => (
+                  <TableHead key={week.week} className={styles.weekHead}>
+                    S{week.week}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((row) => (
+                <TableRow key={row.operation.id}>
+                  <TableCell>
+                    <span className={styles.name}>{row.operation.name}</span>
+                  </TableCell>
+
+                  <TableCell>
+                    <AssignmentDialog operation={row.operation}>
+                      <button
+                        type="button"
+                        className={
+                          row.unassigned
+                            ? styles.unassigned
+                            : styles.responsible
+                        }
+                        title={`Cambiar quién entrega ${row.operation.name}`}
+                      >
+                        {row.unassigned
+                          ? "Sin asignar"
+                          : row.assigned
+                              .map((id) => getUser(id)?.name)
+                              .filter(Boolean)
+                              .join(", ")}
+                      </button>
+                    </AssignmentDialog>
+                  </TableCell>
+
+                  <TableCell>
+                    <span className={styles.company}>
+                      {getCompany(row.operation.companyId)?.name}
+                    </span>
+                  </TableCell>
+
+                  <TableCell className={styles.territory}>
+                    {row.operation.territory}
+                  </TableCell>
+
+                  <TableCell className={styles.badCell}>
+                    <span className={styles.badRow}>
+                      <span
+                        className={`${styles.badDot} ${badDotClass(row.bad, row.asked)}`}
+                        aria-hidden="true"
+                      />
+                      {row.bad} de {row.asked}
+                    </span>
+                  </TableCell>
+
+                  {row.cells.map((cell) => (
+                    <TableCell
+                      key={cell.period.week}
+                      className={styles.weekCell}
+                    >
+                      <WeekCell period={cell.period} progress={cell.progress} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
 
       <p className={styles.footnote}>
-        Cada celda es lo entregado de esa semana; un punto significa que a esa
-        operación no se le pedía nada ese periodo, no que fallara.
+        Cada celda es lo entregado de esa semana.
         {summary.unassignedOperations > 0
           ? ` ${summary.unassignedOperations} operaciones no tienen quien las entregue y se les sigue pidiendo igual.`
           : ""}
