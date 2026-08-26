@@ -36,19 +36,20 @@ import { RemindButton } from "./RemindButton";
  * sideways, and a horizontal scrollbar under a wide table costs more than it
  * gives: the identity columns had to be pinned to survive it, the pinning
  * needed the heavier `DataTable`, and even then a cell halfway across belonged
- * to a header nobody could see. Ten columns fit outright, so this is the plain
- * `Table` and moving through the year is two buttons.
+ * to a header nobody could see. Four columns fit outright with room to spare
+ * for the identity beside them, so this is the plain `Table` and moving through
+ * the year is two buttons.
  *
  * The window ends on the week the summary names, so the two controls are one
  * piece of state: the last column is always the week being reported on.
  *
  * The order puts the worst proportion first, with **enough history first**: two
- * bad weeks out of two and two out of ten are 100% and 20%, and ordering by the
+ * bad weeks out of two and two out of forty are 100% and 5%, and ordering by the
  * two would point at whichever operation we know least about.
  */
 
-/** Ten fits a laptop without scrolling and still shows a run of behaviour. */
-const WINDOW = 10;
+/** Four weeks at a time; the pager walks back through the year from there. */
+const WINDOW = 4;
 
 const styles = {
   page: "flex flex-col gap-5",

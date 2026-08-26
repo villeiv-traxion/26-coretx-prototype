@@ -10,9 +10,9 @@ const styles = {
   wrapper:
     "container flex flex-col items-center gap-10 pb-8 pt-10 sm:pb-12 sm:pt-16",
   intro: "flex flex-col items-center gap-5",
-  // El logo es 719x159 (4.5:1) y la caja 156x40 (3.9:1): `object-contain` lo
-  // encaja sin deformarlo. En móvil, un 30% menos (109x29).
-  logo: "h-[29px] w-[109px] object-contain sm:h-[40px] sm:w-[156px]",
+  // El logo es 719x159 (4.5:1) y la caja 187x48 (3.9:1): `object-contain` lo
+  // encaja sin deformarlo. En móvil, un 30% menos (131x35).
+  logo: "h-[35px] w-[131px] object-contain sm:h-[48px] sm:w-[187px]",
   subtitle:
     "w-full max-w-[680px] text-center text-base text-muted-foreground md:text-lg",
   groups: "flex w-full flex-col items-center gap-6",

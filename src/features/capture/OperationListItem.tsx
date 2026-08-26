@@ -44,6 +44,10 @@ const styles = {
   // The child selector is how the Radix indicator inside Progress gets reached.
   bar: "h-1.5 flex-1 bg-border [&>div]:bg-secondary-medium",
   fraction: "shrink-0 text-xs tabular-nums text-muted-foreground",
+  // The percentage says how far along the bar is; the fraction says of what.
+  // Neither replaces the other: «73%» hides that eleven is the whole, and «8 de
+  // 11» makes the eye do the division the bar already drew.
+  percent: "shrink-0 text-xs font-medium tabular-nums text-muted-foreground",
 };
 
 interface OperationListItemProps {
@@ -58,6 +62,7 @@ export function OperationListItem({
   selected,
 }: OperationListItemProps) {
   const company = getCompany(operation.companyId);
+  const percent = (progress.delivered / progress.total) * 100;
   // Carries the filters across the jump: without them the rail would come back
   // unfiltered the moment you opened one of its own rows.
   const search = useFilterSearch();
@@ -80,10 +85,8 @@ export function OperationListItem({
       </div>
 
       <div className={styles.gauge}>
-        <Progress
-          className={styles.bar}
-          value={(progress.delivered / progress.total) * 100}
-        />
+        <Progress className={styles.bar} value={percent} />
+        <span className={styles.percent}>{Math.round(percent)}%</span>
         <span className={styles.fraction}>
           {progress.delivered} de {progress.total}
         </span>
