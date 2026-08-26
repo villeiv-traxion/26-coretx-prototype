@@ -5,6 +5,12 @@ import { AlertTriangle } from "lucide-react";
 import {
   Card,
   NoDataMessage,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -12,59 +18,61 @@ import {
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
 import { useCoordinationFilters, useSelectedPeriod } from "./lib/filters";
-import {
-  historyOf,
-  progressOf,
-  responsiblesOf,
-  weekSummary,
-} from "./lib/compliance";
+import { progressOf, responsiblesOf, weekSummary } from "./lib/compliance";
 import { getCompany, OPERATIONS } from "./lib/organization";
-import { allWeeks } from "./lib/periods";
+import { isFuture, periodOf, startOf, type Period } from "./lib/periods";
 import { CoordinationFilters } from "./CoordinationFilters";
 import { WeekSummaryInline } from "./WeekSummaryInline";
-import { WeekStrip } from "./WeekStrip";
-import { StripLegend } from "./StripLegend";
+import { WeekCell } from "./WeekCell";
 
 /**
- * The year of compliance, one operation per row.
+ * Delivery by week: one row per operation, one column per week of the range.
  *
- * The order is by **proportion** and not by number of failures: "2 bad weeks"
- * from an operation with two weeks of history and from one with forty are 100%
- * and 5%. Presented the same way, the order points at whichever has the least
- * data, which is precisely the one we know least about.
+ * A window of eight rather than the whole year. Fifty-two columns only fit as
+ * coloured squares, and a square cannot say «9 de 11» — which is the difference
+ * between an operation that slipped and one that never reported at all. Eight
+ * columns fit the numbers, and the range selector reaches further back when the
+ * question needs it.
  *
- * It opens the way the capture screen does — a filter bar with the week summary
- * beside it — because both are the same job seen from two sides, and the week
- * the summary names is the column the strip highlights.
+ * The order puts the worst proportion first, with **enough history first**: two
+ * bad weeks out of two and two out of forty are 100% and 5%, and ordering by
+ * the two would point at whichever operation we know least about.
  */
 
 const styles = {
   page: "flex flex-col gap-5",
   controls: "flex flex-wrap items-center gap-3",
-  table: "overflow-hidden p-0 shadow-none",
+  card: "overflow-hidden p-0 shadow-none",
   scroller: "overflow-x-auto",
-  row: "flex items-center gap-4 border-b px-4 py-2.5 last:border-b-0",
-  identity: "sticky left-0 z-10 flex w-56 shrink-0 flex-col bg-background pr-2",
-  name: "flex items-center gap-1.5 truncate text-sm font-medium leading-tight",
+  nameHead: "sticky left-0 z-10 bg-background",
+  weekHead: "text-center",
+  balanceHead: "whitespace-nowrap text-right",
+  nameCell: "sticky left-0 z-10 bg-background font-medium",
+  name: "flex items-center gap-1.5",
   gap: "h-3.5 w-3.5 shrink-0 text-destructive-warm",
-  context: "truncate text-xs text-muted-foreground",
-  strip: "flex min-w-0 flex-1",
-  balance: "w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground",
-  ruler: "flex items-center gap-4 border-b bg-muted/70 px-4 py-2",
-  rulerGap: "w-56 shrink-0",
-  rulerAxis: "flex min-w-0 flex-1 gap-[2px]",
-  // Matches the cells exactly, so a tick lands over the week it names.
-  rulerTick:
-    "min-w-[6px] flex-1 text-center text-[0.5625rem] tabular-nums text-muted-foreground",
-  legend: "px-4 py-3",
+  context: "text-xs font-normal text-muted-foreground",
+  weekCell: "px-1 text-center",
+  balance: "text-right text-xs tabular-nums text-muted-foreground",
+  balanceBad:
+    "text-right text-xs font-medium tabular-nums text-destructive-warm",
   empty: "py-10",
+  footnote: "text-xs leading-snug text-muted-foreground",
 };
+
+/** The `count` weeks ending at `period`, oldest first. */
+function windowEndingAt(period: Period, count: number): Period[] {
+  const end = startOf(period);
+  return Array.from({ length: count }, (_, i) => {
+    const day = new Date(end);
+    day.setDate(day.getDate() - (count - 1 - i) * 7);
+    return periodOf(day);
+  });
+}
 
 export function ComplianceTable() {
   const state = useStore();
   const now = useNow();
   const { period, setPeriod } = useSelectedPeriod(now);
-  const weeks = useMemo(() => allWeeks(period.year), [period.year]);
 
   const {
     query,
@@ -75,29 +83,42 @@ export function ComplianceTable() {
     setResponsibles,
     unassignedOnly,
     setUnassignedOnly,
+    range,
+    setRange,
     clear,
     active,
   } = useCoordinationFilters();
+
+  const weeks = useMemo(() => windowEndingAt(period, range), [period, range]);
 
   const rows = OPERATIONS.map((operation) => {
     const cells = weeks.map((p) => ({
       period: p,
       progress: progressOf(state, operation.id, p, now),
     }));
-    const history = historyOf(state, operation.id, weeks, now);
+
+    // Weeks actually asked for, and how many of those fell short. Both counted
+    // over the range on screen, so the figure answers what is being looked at.
+    const asked = cells.filter(({ period: p }) => !isFuture(p, now));
+    const bad = asked.filter(
+      ({ progress }) => progress.delivered < progress.total,
+    ).length;
+
+    const assigned = responsiblesOf(state, operation.id);
+
     return {
       operation,
       cells,
-      history,
-      assigned: responsiblesOf(state, operation.id),
-      unassigned: responsiblesOf(state, operation.id).length === 0,
-      ratio: history.required === 0 ? 1 : history.complete / history.required,
+      bad,
+      asked: asked.length,
+      assigned,
+      unassigned: assigned.length === 0,
     };
-  }).sort((a, b) => a.ratio - b.ratio);
+  });
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return rows.filter((row) => {
+    const filtered = rows.filter((row) => {
       if (unassignedOnly && !row.unassigned) return false;
       if (
         companies.length > 0 &&
@@ -105,8 +126,8 @@ export function ComplianceTable() {
       ) {
         return false;
       }
-      // Any of the chosen people, not all: the question is «what do these
-      // three carry between them», never «what do the three share».
+      // Any of the chosen people, not all: the question is «what do these three
+      // carry between them», never «what do the three share».
       if (
         responsibles.length > 0 &&
         !row.assigned.some((id) => responsibles.includes(id))
@@ -115,7 +136,15 @@ export function ComplianceTable() {
       }
       return !term || row.operation.name.toLowerCase().includes(term);
     });
-  }, [rows, query, companies, responsibles, unassignedOnly]);
+
+    const enough = Math.ceil(range / 2);
+    return [...filtered].sort((a, b) => {
+      const aEnough = a.asked >= enough ? 1 : 0;
+      const bEnough = b.asked >= enough ? 1 : 0;
+      if (aEnough !== bEnough) return bEnough - aEnough;
+      return b.bad / (b.asked || 1) - a.bad / (a.asked || 1);
+    });
+  }, [rows, query, companies, responsibles, unassignedOnly, range]);
 
   const summary = weekSummary(state, period, now);
   const reported = OPERATIONS.filter(
@@ -134,6 +163,8 @@ export function ComplianceTable() {
           onResponsiblesChange={setResponsibles}
           unassignedOnly={unassignedOnly}
           onUnassignedOnlyChange={setUnassignedOnly}
+          range={range}
+          onRangeChange={setRange}
           onClear={clear}
           active={active}
         />
@@ -148,7 +179,7 @@ export function ComplianceTable() {
         />
       </div>
 
-      <Card className={styles.table}>
+      <Card className={styles.card}>
         {visible.length === 0 ? (
           <div className={styles.empty}>
             <NoDataMessage
@@ -157,64 +188,78 @@ export function ComplianceTable() {
             />
           </div>
         ) : (
-          <>
-            <div className={styles.scroller}>
-              <div className={styles.ruler}>
-                <span className={styles.rulerGap} />
-                <div className={styles.rulerAxis}>
-                  {weeks.map((p) => (
-                    <span key={p.week} className={styles.rulerTick}>
-                      {p.week % 5 === 0 ? p.week : ""}
-                    </span>
+          <div className={styles.scroller}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={styles.nameHead}>Operación</TableHead>
+                  {weeks.map((week) => (
+                    <TableHead key={week.week} className={styles.weekHead}>
+                      S{week.week}
+                    </TableHead>
                   ))}
-                </div>
-              </div>
+                  <TableHead className={styles.balanceHead}>
+                    Semanas malas
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((row) => (
+                  <TableRow key={row.operation.id}>
+                    <TableCell className={styles.nameCell}>
+                      <span className={styles.name}>
+                        {row.unassigned ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className={styles.gap} />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Nadie tiene asignada esta operación. Se le sigue
+                              pidiendo igual.
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                        {row.operation.name}
+                      </span>
+                      <span className={styles.context}>
+                        {getCompany(row.operation.companyId)?.name} ·{" "}
+                        {row.operation.territory}
+                      </span>
+                    </TableCell>
 
-              {visible.map((row) => (
-                <div key={row.operation.id} className={styles.row}>
-                  <div className={styles.identity}>
-                    <span className={styles.name}>
-                      {row.unassigned ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertTriangle className={styles.gap} />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Nadie tiene asignada esta operación. Se le sigue
-                            pidiendo igual.
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : null}
-                      {row.operation.name}
-                    </span>
-                    <span className={styles.context}>
-                      {getCompany(row.operation.companyId)?.name} ·{" "}
-                      {row.operation.territory}
-                    </span>
-                  </div>
+                    {row.cells.map((cell) => (
+                      <TableCell
+                        key={cell.period.week}
+                        className={styles.weekCell}
+                      >
+                        <WeekCell
+                          period={cell.period}
+                          progress={cell.progress}
+                        />
+                      </TableCell>
+                    ))}
 
-                  <div className={styles.strip}>
-                    <WeekStrip weeks={row.cells} currentWeek={period.week} />
-                  </div>
-
-                  <span className={styles.balance}>
-                    {row.history.complete} de {row.history.required}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.legend}>
-              <StripLegend />
-            </div>
-          </>
+                    <TableCell
+                      className={
+                        row.bad > 0 ? styles.balanceBad : styles.balance
+                      }
+                    >
+                      {row.bad} de {row.asked}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
 
-      <p className={styles.context}>
-        {summary.unassignedOperations === 0
-          ? "Todas las operaciones tienen quien las entregue."
-          : `${summary.unassignedOperations} operaciones no tienen quien las entregue. Se les sigue pidiendo igual.`}
+      <p className={styles.footnote}>
+        Cada celda es lo entregado de esa semana; un punto significa que a esa
+        operación no se le pedía nada ese periodo, no que fallara.
+        {summary.unassignedOperations > 0
+          ? ` ${summary.unassignedOperations} operaciones no tienen quien las entregue y se les sigue pidiendo igual.`
+          : ""}
       </p>
     </div>
   );

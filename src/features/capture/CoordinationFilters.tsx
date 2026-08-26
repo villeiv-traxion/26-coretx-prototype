@@ -1,8 +1,18 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Button, Switch, Label } from "@traxion-global/design-system/react";
+import {
+  Button,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from "@traxion-global/design-system/react";
 import { FilterSearch } from "@/ui/FilterSearch";
+import { WEEK_RANGES, type WeekRange } from "./lib/filters";
 import { CompanyFilter } from "./CompanyFilter";
 import { ResponsibleFilter } from "./ResponsibleFilter";
 
@@ -21,6 +31,7 @@ import { ResponsibleFilter } from "./ResponsibleFilter";
 
 const styles = {
   root: "flex flex-1 flex-wrap items-center gap-2",
+  field: "h-8 w-40",
   toggle: "flex h-8 items-center gap-2",
   toggleLabel: "cursor-pointer whitespace-nowrap text-xs text-muted-foreground",
   clearIcon: "h-4 w-4",
@@ -35,6 +46,9 @@ interface CoordinationFiltersProps {
   onResponsiblesChange: (responsibles: string[]) => void;
   unassignedOnly: boolean;
   onUnassignedOnlyChange: (only: boolean) => void;
+  /** How many weeks the table shows. Omit on screens without a week axis. */
+  range?: WeekRange;
+  onRangeChange?: (range: WeekRange) => void;
   onClear: () => void;
   active: boolean;
 }
@@ -48,6 +62,8 @@ export function CoordinationFilters({
   onResponsiblesChange,
   unassignedOnly,
   onUnassignedOnlyChange,
+  range,
+  onRangeChange,
   onClear,
   active,
 }: CoordinationFiltersProps) {
@@ -65,6 +81,24 @@ export function CoordinationFilters({
         value={responsibles}
         onChange={onResponsiblesChange}
       />
+
+      {range && onRangeChange ? (
+        <Select
+          value={String(range)}
+          onValueChange={(value) => onRangeChange(Number(value) as WeekRange)}
+        >
+          <SelectTrigger className={styles.field} aria-label="Rango de semanas">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {WEEK_RANGES.map((weeks) => (
+              <SelectItem key={weeks} value={String(weeks)}>
+                Últimas {weeks} semanas
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
 
       <div className={styles.toggle}>
         <Switch

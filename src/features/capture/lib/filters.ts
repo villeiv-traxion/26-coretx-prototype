@@ -130,6 +130,17 @@ export function useOperationFilters(): OperationFilterState {
 
 const UNASSIGNED = "un";
 const RESPONSIBLE = "re";
+const RANGE = "r";
+
+/** How many weeks the compliance table shows at once. */
+export const WEEK_RANGES = [4, 8, 12] as const;
+export type WeekRange = (typeof WEEK_RANGES)[number];
+
+/**
+ * Eight, because it is enough history to tell a bad week from a bad operation
+ * and few enough that every column still fits a legible number.
+ */
+const DEFAULT_RANGE: WeekRange = 8;
 
 export interface CoordinationFilterState {
   query: string;
@@ -140,6 +151,8 @@ export interface CoordinationFilterState {
   setResponsibles: (responsibles: string[]) => void;
   unassignedOnly: boolean;
   setUnassignedOnly: (only: boolean) => void;
+  range: WeekRange;
+  setRange: (range: WeekRange) => void;
   clear: () => void;
   active: boolean;
 }
@@ -162,6 +175,11 @@ export function useCoordinationFilters(): CoordinationFilterState {
     [params],
   );
   const unassignedOnly = params.get(UNASSIGNED) === "1";
+
+  const rawRange = Number(params.get(RANGE));
+  const range = (WEEK_RANGES as readonly number[]).includes(rawRange)
+    ? (rawRange as WeekRange)
+    : DEFAULT_RANGE;
 
   const [draft, setDraft] = useState(urlQuery);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,6 +232,13 @@ export function useCoordinationFilters(): CoordinationFilterState {
       (only: boolean) => write([[UNASSIGNED, only ? "1" : ""]]),
       [write],
     ),
+    range,
+    setRange: useCallback(
+      // The default stays out of the URL, so a plain link is the plain view.
+      (next: WeekRange) =>
+        write([[RANGE, next === DEFAULT_RANGE ? "" : String(next)]]),
+      [write],
+    ),
     // One write for all three, for the reason the capture `clear` gives.
     clear: useCallback(() => {
       if (timer.current) clearTimeout(timer.current);
@@ -223,6 +248,7 @@ export function useCoordinationFilters(): CoordinationFilterState {
         [COMPANIES, ""],
         [RESPONSIBLE, ""],
         [UNASSIGNED, ""],
+        [RANGE, ""],
       ]);
     }, [write]),
     active:
