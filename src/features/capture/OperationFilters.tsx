@@ -43,7 +43,6 @@ const styles = {
     "pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground",
   searchInput: "h-8 w-full pl-9",
   clearIcon: "h-4 w-4",
-  count: "text-xs text-muted-foreground",
 };
 
 interface OperationFiltersProps {
@@ -53,9 +52,6 @@ interface OperationFiltersProps {
   onCompaniesChange: (companies: string[]) => void;
   states: Completeness[];
   onStatesChange: (states: Completeness[]) => void;
-  /** Showing / total, so a shrunken rail never looks like a missing assignment. */
-  showing: number;
-  total: number;
 }
 
 export function OperationFilters({
@@ -65,8 +61,6 @@ export function OperationFilters({
   onCompaniesChange,
   states,
   onStatesChange,
-  showing,
-  total,
 }: OperationFiltersProps) {
   const active =
     query.trim() !== "" || companies.length > 0 || states.length > 0;
@@ -105,22 +99,17 @@ export function OperationFilters({
       </div>
 
       {active ? (
-        <>
-          <Button
-            variant="outline"
-            onClick={() => {
-              onQueryChange("");
-              onCompaniesChange([]);
-              onStatesChange([]);
-            }}
-          >
-            <X className={styles.clearIcon} />
-            Limpiar
-          </Button>
-          <span className={styles.count}>
-            {showing} de {total}
-          </span>
-        </>
+        <Button
+          variant="outline"
+          onClick={() => {
+            onQueryChange("");
+            onCompaniesChange([]);
+            onStatesChange([]);
+          }}
+        >
+          <X className={styles.clearIcon} />
+          Limpiar
+        </Button>
       ) : null}
     </div>
   );

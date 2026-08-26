@@ -119,8 +119,6 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
         onCompaniesChange={setCompanies}
         states={states}
         onStatesChange={setStates}
-        showing={visible.length}
-        total={rows.length}
       />
 
       <Card className={styles.surface}>
