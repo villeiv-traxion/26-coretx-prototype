@@ -1,24 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Lock } from "lucide-react";
 import {
   Button,
-  Card,
   Label,
   NoDataMessage,
   Progress,
   Switch,
   toast,
 } from "@traxion-global/design-system/react";
+import { Alert } from "@/ui/Alert";
 import { INDICATORS } from "./lib/catalog";
 import type { Values } from "./lib/formulas";
 import { check, isComplete } from "./lib/rules";
 import { useActions, useStore } from "./lib/store";
 import { useNow } from "./lib/now";
+import { useSelectedPeriod } from "./lib/filters";
 import { completenessOf, valuesFor } from "./lib/compliance";
 import { getCompany, getOperation } from "./lib/organization";
-import { cutoffInWords, isClosed, periodOf, rangeInWords } from "./lib/periods";
+import { cutoffInWords, isClosed, rangeInWords } from "./lib/periods";
 import { IndicatorBlock } from "./IndicatorBlock";
 import { CompletenessBadge } from "./CompletenessBadge";
 
@@ -42,10 +42,6 @@ const styles = {
   identity: "flex min-w-0 flex-col gap-1",
   title: "text-lg font-semibold leading-tight sm:text-xl",
   context: "text-sm text-muted-foreground",
-  notice:
-    "flex items-start gap-3 border-l-4 border-secondary bg-muted/60 px-4 py-3 text-sm shadow-none",
-  noticeIcon: "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground",
-  noticeText: "leading-snug",
   // Badge and switch stack on the right so the head stays two rows tall, in
   // step with the title and its line of context on the left.
   side: "flex shrink-0 flex-col items-end gap-2",
@@ -64,7 +60,7 @@ export function CaptureForm({ operationId }: { operationId: string }) {
   const now = useNow();
   const { save } = useActions();
 
-  const period = periodOf(now);
+  const { period } = useSelectedPeriod(now);
   const closed = isClosed(period, now);
 
   const operation = getOperation(operationId);
@@ -139,13 +135,10 @@ export function CaptureForm({ operationId }: { operationId: string }) {
       </div>
 
       {closed ? (
-        <Card className={styles.notice}>
-          <Lock className={styles.noticeIcon} />
-          <p className={styles.noticeText}>
-            La semana {period.week} cerró el {cutoffInWords(period)}. Lo que hay
-            aquí es el dato oficial y ya no se puede modificar.
-          </p>
-        </Card>
+        <Alert
+          title={`La semana ${period.week} cerró el ${cutoffInWords(period)}`}
+          description="Lo que hay aquí es el dato oficial y ya no se puede modificar."
+        />
       ) : null}
 
       {shown.length === 0 ? (

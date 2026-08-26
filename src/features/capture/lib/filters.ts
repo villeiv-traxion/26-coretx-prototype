@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Completeness } from "./compliance";
+import { isFuture, periodFromKey, periodKey, periodOf, type Period } from "./periods";
 
 /**
  * The rail filters, kept in the URL.
@@ -124,6 +125,61 @@ export function useOperationFilters(): OperationFilterState {
     setStates,
     clear,
     active: draft.trim() !== "" || companies.length > 0 || states.length > 0,
+  };
+}
+
+const WEEK = "w";
+
+/**
+ * Which week the screen is showing.
+ *
+ * In the URL for the same reasons the filters are: it survives picking an
+ * operation, and a link opens on the week it was sent from.
+ *
+ * A week that has not started yet is refused and the current one used instead.
+ * Nothing is owed for a week that has not happened, so a form for it would be
+ * eleven fields nobody can answer.
+ */
+export function useSelectedPeriod(now: Date): {
+  period: Period;
+  setPeriod: (period: Period) => void;
+  isCurrent: boolean;
+} {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+
+  const current = periodOf(now);
+  const raw = params.get(WEEK);
+
+  const period = useMemo(() => {
+    if (!raw) return current;
+    const parsed = periodFromKey(raw);
+    if (!Number.isFinite(parsed.year) || !Number.isFinite(parsed.week)) {
+      return current;
+    }
+    return isFuture(parsed, now) ? current : parsed;
+    // `current` is derived from `now`, so it moves with it and needs no entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw, now]);
+
+  const setPeriod = useCallback(
+    (next: Period) => {
+      const params2 = new URLSearchParams(params.toString());
+      if (periodKey(next) === periodKey(current)) params2.delete(WEEK);
+      else params2.set(WEEK, periodKey(next));
+      const search = params2.toString();
+      router.replace(search ? `${pathname}?${search}` : pathname, {
+        scroll: false,
+      });
+    },
+    [params, pathname, router, current],
+  );
+
+  return {
+    period,
+    setPeriod,
+    isCurrent: periodKey(period) === periodKey(current),
   };
 }
 

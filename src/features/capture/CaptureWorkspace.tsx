@@ -6,8 +6,8 @@ import { Card } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
 import { completenessOf, operationsOf, progressOf } from "./lib/compliance";
-import { useOperationFilters } from "./lib/filters";
-import { periodOf } from "./lib/periods";
+import { useOperationFilters, useSelectedPeriod } from "./lib/filters";
+import { periodKey } from "./lib/periods";
 import { WeekSummaryInline } from "./WeekSummaryInline";
 import { OperationFilters } from "./OperationFilters";
 import { OperationList } from "./OperationList";
@@ -63,7 +63,7 @@ const styles = {
 export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
   const state = useStore();
   const now = useNow();
-  const period = periodOf(now);
+  const { period, setPeriod } = useSelectedPeriod(now);
 
   const rows = operationsOf(state, state.userId)
     .map((operation) => ({
@@ -118,7 +118,13 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
           onClear={clear}
           active={filtering}
         />
-        <WeekSummaryInline now={now} complete={complete} total={rows.length} />
+        <WeekSummaryInline
+          period={period}
+          onPeriodChange={setPeriod}
+          now={now}
+          complete={complete}
+          total={rows.length}
+        />
       </div>
 
       <Card className={styles.surface}>
@@ -132,7 +138,13 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
 
         <div className={selectedId ? styles.panel : styles.panelHidden}>
           {selectedId ? (
-            <CaptureForm key={selectedId} operationId={selectedId} />
+            // Remounts on a change of week too: the draft belongs to one
+            // operation in one week, and carrying it across would offer last
+            // week’s numbers as this week’s.
+            <CaptureForm
+              key={`${selectedId}|${periodKey(period)}`}
+              operationId={selectedId}
+            />
           ) : (
             <div className={styles.placeholder}>
               <MousePointerClick className={styles.placeholderIcon} />

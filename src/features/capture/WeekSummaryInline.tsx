@@ -1,23 +1,24 @@
 "use client";
 
-import { CalendarDays, Clock, Lock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
 import { Separator } from "@traxion-global/design-system/react";
 import {
   cutoffOf,
   isClosed,
-  periodOf,
-  rangeInWords,
   timeLeft,
   type Period,
 } from "./lib/periods";
+import { WeekPicker } from "./WeekPicker";
 
 /**
- * The week, in one line, sized to sit beside the filters.
- *
  * Three facts and no more: which week, how much is in, how long is left. It
  * replaced a full header block that carried the same figures inside a sentence,
  * a progress bar and a row of chips — the room that took was worth more to the
  * work below it than the phrasing was.
+ *
+ * The week is not a label but a control: reaching back a week or two to check
+ * what was delivered is the other thing people come here to do, and this is the
+ * only place on the screen that names the week at all.
  *
  * The countdown still turns warm inside the last day. That is the one thing the
  * short version cannot afford to lose.
@@ -39,6 +40,8 @@ const styles = {
 };
 
 interface WeekSummaryInlineProps {
+  period: Period;
+  onPeriodChange: (period: Period) => void;
   now: Date;
   /** Operations with all eleven indicators in. */
   complete: number;
@@ -50,22 +53,19 @@ function hoursLeft(period: Period, now: Date): number {
 }
 
 export function WeekSummaryInline({
+  period,
+  onPeriodChange,
   now,
   complete,
   total,
 }: WeekSummaryInlineProps) {
-  const period = periodOf(now);
   const closed = isClosed(period, now);
   const remaining = timeLeft(period, now);
   const urgent = !closed && hoursLeft(period, now) <= URGENT_HOURS;
 
   return (
     <div className={urgent ? styles.rootUrgent : styles.root}>
-      <span className={styles.cell}>
-        <CalendarDays className={styles.icon} aria-hidden="true" />
-        Semana <span className={styles.figure}>{period.week}</span>
-        <span>· {rangeInWords(period)}</span>
-      </span>
+      <WeekPicker period={period} onChange={onPeriodChange} now={now} />
 
       <Separator orientation="vertical" className={styles.divider} />
 
