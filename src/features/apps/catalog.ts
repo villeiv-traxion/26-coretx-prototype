@@ -1,5 +1,5 @@
 /** Ejes/categorías bajo los que se agrupan las apps en el Home y en el panel. */
-export type CategoryId = "logistics" | "cargo" | "people" | "transversal";
+export type CategoryId = "logistics" | "cargoPeople" | "transversal";
 
 /** Apps principales CoreTX. Los ids son la clave de `t.apps`. */
 export type AppId =
@@ -8,7 +8,8 @@ export type AppId =
   | "fleet"
   | "mind"
   | "intelligence"
-  | "navigate";
+  | "navigate"
+  | "connect";
 
 export type CoretxApp = {
   id: AppId;
@@ -32,8 +33,8 @@ export type CoretxApp = {
  * apilan todas las categorías en una columna.
  */
 export const CATEGORY_ROWS: CategoryId[][] = [
-  ["logistics", "cargo"],
-  ["people", "transversal"],
+  ["logistics", "cargoPeople"],
+  ["transversal"],
 ];
 
 export const APPS: CoretxApp[] = [
@@ -51,13 +52,13 @@ export const APPS: CoretxApp[] = [
   },
   {
     id: "fleet",
-    category: "cargo",
+    category: "cargoPeople",
     illustration: "/apps/fleet.svg",
     hasAccess: true,
   },
   {
     id: "mind",
-    category: "people",
+    category: "cargoPeople",
     illustration: "/apps/mind.svg",
     // Ejemplo de app sin acceso: su botón sale deshabilitado con tooltip.
     hasAccess: false,
@@ -73,6 +74,12 @@ export const APPS: CoretxApp[] = [
     id: "navigate",
     category: "transversal",
     illustration: "/apps/navigate.svg",
+    hasAccess: true,
+  },
+  {
+    id: "connect",
+    category: "transversal",
+    illustration: "/apps/connect.svg",
     hasAccess: true,
   },
 ];

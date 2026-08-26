@@ -22,8 +22,7 @@ export const translations = {
     },
     categories: {
       logistics: "Logística y tecnología",
-      cargo: "Carga",
-      people: "Personas",
+      cargoPeople: "Carga y personas",
       transversal: "Transversales",
     },
     apps: {
@@ -50,6 +49,10 @@ export const translations = {
       navigate: {
         name: "CoreTX Navigate",
         description: "Ejecución Comercial Corporativa.",
+      },
+      connect: {
+        name: "CoreTX Connect",
+        description: "Digitalización de Servicios Corporativos.",
       },
     },
     footer: {
@@ -89,8 +92,7 @@ export const translations = {
     },
     categories: {
       logistics: "Logistics and technology",
-      cargo: "Cargo",
-      people: "People",
+      cargoPeople: "Cargo and people",
       transversal: "Cross-cutting",
     },
     apps: {
@@ -117,6 +119,10 @@ export const translations = {
       navigate: {
         name: "CoreTX Navigate",
         description: "Corporate commercial execution.",
+      },
+      connect: {
+        name: "CoreTX Connect",
+        description: "Digitalisation of corporate services.",
       },
     },
     footer: {

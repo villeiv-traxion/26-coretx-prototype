@@ -15,10 +15,10 @@ import type { Period } from "./lib/periods";
  * y recordar es E2.» Recording the number for somebody is how a submission ends
  * up carrying a name that never typed it.
  *
- * It appears only where it can do something: the week still open, still short,
- * and with somebody to remind. A finished week needs no nudge, a closed one is
- * past nudging, and an operation with nobody assigned needs a responsible —
- * which is the column next door, not this button.
+ * It is always there and sometimes disabled, rather than appearing and
+ * vanishing: a control that comes and goes down a column makes the rows jump
+ * and leaves the reader wondering what they did to lose it. Disabled says the
+ * same thing and stays still — and the tooltip says why.
  */
 
 const styles = {
@@ -40,18 +40,19 @@ export function RemindButton({
   assigned,
 }: RemindButtonProps) {
   const missing = progress.total - progress.delivered;
-  const canRemind =
-    !progress.closed &&
-    progress.status !== "FUTURE" &&
-    missing > 0 &&
-    assigned.length > 0;
-
-  if (!canRemind) return null;
 
   const names = assigned
     .map((id) => getUser(id)?.name)
     .filter(Boolean)
     .join(", ");
+
+  // Why it cannot be pressed, in the words the tooltip will use.
+  const blocked =
+    assigned.length === 0
+      ? "Nadie tiene asignada esta operación todavía."
+      : missing === 0
+        ? "Ya entregó los once indicadores de la semana."
+        : null;
 
   function onRemind() {
     // Nothing is sent. The scheduler and outbound mail arrive with E2 — until
@@ -66,8 +67,17 @@ export function RemindButton({
     <Button
       variant="outline"
       className={styles.button}
+      disabled={blocked !== null}
       onClick={onRemind}
-      aria-label={`Recordar a ${names} la semana ${period.week} de ${operation.name}`}
+      title={
+        blocked ??
+        `Recordar a ${names} que faltan ${missing} de ${progress.total}`
+      }
+      aria-label={
+        blocked
+          ? `No se puede recordar la semana ${period.week} de ${operation.name}: ${blocked}`
+          : `Recordar a ${names} la semana ${period.week} de ${operation.name}`
+      }
     >
       <Bell className={styles.icon} />
       Recordar

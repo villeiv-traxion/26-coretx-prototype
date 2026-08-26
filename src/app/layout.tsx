@@ -22,6 +22,9 @@ export const metadata: Metadata = {
 const styles = {
   body: "antialiased",
   shell: "flex min-h-screen flex-col",
+  // Sin esto el footer se detiene donde acaba el contenido y deja la franja
+  // sobrante debajo, visible en pantallas altas.
+  main: "flex-1",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -33,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Toaster position="top-right" closeButton />
             <div className={styles.shell}>
               <Header />
-              <main>{children}</main>
+              <main className={styles.main}>{children}</main>
               <Footer />
               <ChatDock />
             </div>

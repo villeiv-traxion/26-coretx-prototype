@@ -17,18 +17,24 @@ import type { CoretxApp } from "./catalog";
 const styles = {
   // En móvil ocupan todo el ancho disponible; desde `sm` el ancho es fijo y es
   // lo que define el ancho del wrapper gris de cada categoría.
-  card: "w-full sm:w-[380px] grid grid-cols-[auto_1fr] p-2 sm:p-4 gap-x-4 shadow-none",
+  //
+  // El ancho llega en `--card-width` desde el grupo (AppCategorySection), que
+  // es quien decide cuánto miden sus cards; el 250px del fallback es sólo para
+  // una card fuera de un grupo. La ilustración se deriva de la misma variable,
+  // así que el SVG sigue al ancho sin tocarlo aparte.
+  card: "w-full sm:w-[var(--card-width,250px)] grid grid-cols-[auto_1fr] p-2 sm:p-4 gap-x-4 shadow-none",
   header: "self-center p-0 pb-1 sm:row-span-2",
-  svg: "w-16 h-16 sm:w-20 sm:h-20",
+  // 20% del ancho de la card. En móvil no se puede derivar —la card es fluida y
+  // un 20% de pantalla completa la desbordaría—, así que ahí queda el tamaño fijo.
+  svg: "w-[3.2rem] h-[3.2rem] sm:w-[calc(var(--card-width,250px)*0.2)] sm:h-[calc(var(--card-width,250px)*0.2)]",
   content: "overflow-hidden p-0 col-start-2",
-  title: "text-lg sm:text-xl mb-1 leading-tight group-[.bg-dark]:text-white",
+  title: "text-sm sm:text-base mb-1 leading-tight group-[.bg-dark]:text-white",
   description:
     "text-xs text-muted-foreground leading-tight mb-2 sm:mb-3 group-[.bg-dark]:text-white/70",
   linksSection: "p-0 col-span-2 sm:col-span-1 sm:col-start-2",
-  // `size="lg"` (h-9 px-8) es la base para móvil; desde `sm` se restauran las
-  // medidas del size `default` del DS (h-8 px-4 py-2), porque la prop `size` no
-  // admite breakpoints.
-  linkButton: "w-full sm:h-8 sm:px-4 sm:py-2",
+  // `size="sm"` es el más pequeño que trae el DS. Sólo se le fuerza el ancho:
+  // en móvil ocupa la card entera, y desde `sm` se ajusta a su texto.
+  linkButton: "w-full sm:w-auto",
   // Un botón deshabilitado no emite eventos de puntero, así que el tooltip
   // necesita colgar de un envoltorio y no del propio botón.
   disabledWrapper: "inline-block w-full",
@@ -61,7 +67,7 @@ export function AppCard({ app }: AppCardProps) {
           <Button
             asChild={Boolean(app.href)}
             variant="outline"
-            size="lg"
+            size="sm"
             className={styles.linkButton}
           >
             {app.href ? <Link href={app.href}>{openLabel}</Link> : openLabel}
@@ -72,7 +78,7 @@ export function AppCard({ app }: AppCardProps) {
               <span className={styles.disabledWrapper} tabIndex={0}>
                 <Button
                   variant="outline"
-                  size="lg"
+                  size="sm"
                   disabled
                   className={styles.linkButton}
                 >

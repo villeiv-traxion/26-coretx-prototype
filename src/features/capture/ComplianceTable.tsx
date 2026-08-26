@@ -30,7 +30,7 @@ import { WeekCell } from "./WeekCell";
 import { RemindButton } from "./RemindButton";
 
 /**
- * Delivery by week: one row per operation, ten weeks at a time.
+ * Delivery by week: one row per operation, four weeks at a time.
  *
  * A window rather than the whole year. Fifty-two columns only fit by scrolling
  * sideways, and a horizontal scrollbar under a wide table costs more than it
@@ -79,8 +79,25 @@ const styles = {
   badDot: "h-1.5 w-1.5 shrink-0 rounded-full",
   weekHead: "text-center",
   weekCell: "px-1 text-center",
-  remindCell: "text-right",
-  srOnly: "sr-only",
+  // The open week gets a rule down its left edge and a word under its number.
+  // Its job is not to locate the column — it is always the last one — but to
+  // say that this week is still running and should not be read like the ones
+  // beside it, which are settled.
+  // The open week is the wide one — it carries the nudge as well as the count —
+  // so its cells start at the left edge instead of floating in the middle of a
+  // column the others do not need.
+  //
+  // The width is fixed at what that content actually measures — chip, gap and
+  // button — so the centred header lands over the middle of the content rather
+  // than over the middle of whatever slack the table decided to give the
+  // column. Left-aligned content under a centred title only looks centred when
+  // the two are the same width.
+  weekHeadCurrent: "w-[10.5rem] border-l-2 border-primary text-center",
+  weekCellCurrent: "w-[10.5rem] border-l-2 border-primary px-2 text-left",
+  currentHead: "inline-flex flex-col items-center",
+  currentTag:
+    "text-[0.625rem] font-normal leading-tight text-muted-foreground",
+  weekRow: "inline-flex items-center gap-1.5",
   // The name is the control. A column of twenty-four identical buttons said
   // the same thing twenty-four times; clicking who is responsible to change who
   // is responsible needs no label at all. The underline on hover is what makes
@@ -106,8 +123,9 @@ const styles = {
  * states, any bad week or none. Its 0.5 belongs to a different sentence, the
  * count of operations that «failed for real in half the weeks or more».
  *
- * Three in ten is Iván's call. It travels with the window: at ten weeks it is
- * three, at four it is two.
+ * Three in ten is Iván's call. Being a proportion, it travels with the window:
+ * over the four on screen, of which three are closed, a single bad week already
+ * clears it. A shorter window is a harsher one.
  */
 const CHRONIC = 0.3;
 
@@ -220,9 +238,6 @@ export function ComplianceTable() {
   const first = weeks[0];
   const last = weeks[weeks.length - 1];
 
-  // The column only makes sense while the open week is on screen: paging back
-  // through the year is history, and nobody can be reminded about last March.
-  const showRemind = last.week === current.week;
 
   return (
     <div className={styles.page}>
@@ -287,16 +302,26 @@ export function ComplianceTable() {
                 <TableHead>Compañía</TableHead>
                 <TableHead>Territorio</TableHead>
                 <TableHead className={styles.badHead}>Semanas malas</TableHead>
-                {weeks.map((week) => (
-                  <TableHead key={week.week} className={styles.weekHead}>
-                    S{week.week}
-                  </TableHead>
-                ))}
-                {showRemind ? (
-                  <TableHead className={styles.remindCell}>
-                    <span className={styles.srOnly}>Recordar</span>
-                  </TableHead>
-                ) : null}
+                {weeks.map((week) => {
+                  const isCurrent = week.week === current.week;
+                  return (
+                    <TableHead
+                      key={week.week}
+                      className={
+                        isCurrent ? styles.weekHeadCurrent : styles.weekHead
+                      }
+                    >
+                      {isCurrent ? (
+                        <span className={styles.currentHead}>
+                          <span>S{week.week}</span>
+                          <span className={styles.currentTag}>en curso</span>
+                        </span>
+                      ) : (
+                        <>S{week.week}</>
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -350,22 +375,32 @@ export function ComplianceTable() {
                   {row.cells.map((cell) => (
                     <TableCell
                       key={cell.period.week}
-                      className={styles.weekCell}
+                      className={
+                        cell.period.week === current.week
+                          ? styles.weekCellCurrent
+                          : styles.weekCell
+                      }
                     >
-                      <WeekCell period={cell.period} progress={cell.progress} />
+                      {/* The nudge sits with the count it is about: «7/11» and
+                          «Recordar» are one sentence, and a column of its own
+                          put the verb three columns from its subject. Only the
+                          open week has one — the others are past nudging. */}
+                      <span className={styles.weekRow}>
+                        <WeekCell
+                          period={cell.period}
+                          progress={cell.progress}
+                        />
+                        {cell.period.week === current.week ? (
+                          <RemindButton
+                            operation={row.operation}
+                            period={cell.period}
+                            progress={cell.progress}
+                            assigned={row.assigned}
+                          />
+                        ) : null}
+                      </span>
                     </TableCell>
                   ))}
-
-                  {showRemind ? (
-                    <TableCell className={styles.remindCell}>
-                      <RemindButton
-                        operation={row.operation}
-                        period={last}
-                        progress={row.cells[row.cells.length - 1].progress}
-                        assigned={row.assigned}
-                      />
-                    </TableCell>
-                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
