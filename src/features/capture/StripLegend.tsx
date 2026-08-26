@@ -3,9 +3,9 @@
 /** Without this the strip is decoration: nobody knows what each tone means. */
 
 const KEYS = [
-  { className: "bg-primary", label: "Semana completa" },
-  { className: "bg-primary/45", label: "Parcial" },
-  { className: "bg-destructive/60", label: "Sin entregar" },
+  { className: "bg-green-500", label: "Semana completa" },
+  { className: "bg-yellow-500", label: "Parcial" },
+  { className: "bg-destructive-warm", label: "Sin entregar" },
   { className: "bg-muted", label: "Sin abrir" },
 ];
 

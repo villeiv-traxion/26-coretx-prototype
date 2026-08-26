@@ -18,20 +18,39 @@ import type { Period } from "./lib/periods";
  */
 
 const styles = {
-  strip: "flex gap-[2px]",
-  cell: "h-4 w-[9px] shrink-0 rounded-[2px]",
+  // The cells share the row instead of taking a fixed 9px each: on a wide table
+  // that left the year squeezed into the first third of the width with dead
+  // space after it. A floor keeps them tappable, and once it bites the table
+  // scrolls sideways rather than shaving them thinner.
+  strip: "flex flex-1 gap-[2px]",
+  cell: "h-4 min-w-[6px] flex-1 rounded-[2px]",
   current: "ring-2 ring-secondary ring-offset-1",
 };
 
+/**
+ * The same three colours the badges use, so «Completo» and a green square are
+ * one fact told twice rather than two schemes to learn. `yellow-500` and
+ * `green-500` are the palette the design system itself reaches for in its Badge
+ * variants; the gap keeps the warm destructive, which the app uses everywhere
+ * for something missing rather than something wrong.
+ *
+ * No shading inside «parcial»: the tooltip already says «9 de 11», and four
+ * tints of the same hue asked the eye to measure what a number states.
+ */
 function fillClass(progress: WeekProgress): string {
-  if (progress.status === "FUTURE") return "bg-muted";
-  if (progress.status === "MISSED") return "bg-destructive/60";
-
-  const fraction = progress.delivered / progress.total;
-  if (fraction >= 1) return "bg-primary";
-  if (fraction >= 0.75) return "bg-primary/70";
-  if (fraction >= 0.4) return "bg-primary/45";
-  return "bg-primary/25";
+  switch (progress.status) {
+    case "FUTURE":
+      return "bg-muted";
+    case "MISSED":
+      return "bg-destructive-warm";
+    case "OFFICIAL":
+    case "DRAFT":
+      return progress.delivered === progress.total
+        ? "bg-green-500"
+        : "bg-yellow-500";
+    default:
+      return "bg-muted";
+  }
 }
 
 function caption(period: Period, progress: WeekProgress): string {

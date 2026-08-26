@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { Button, Switch, Label } from "@traxion-global/design-system/react";
 import { FilterSearch } from "@/ui/FilterSearch";
 import { CompanyFilter } from "./CompanyFilter";
+import { ResponsibleFilter } from "./ResponsibleFilter";
 
 /**
  * The filter bar of the coordination screens.
@@ -30,6 +31,8 @@ interface CoordinationFiltersProps {
   onQueryChange: (query: string) => void;
   companies: string[];
   onCompaniesChange: (companies: string[]) => void;
+  responsibles: string[];
+  onResponsiblesChange: (responsibles: string[]) => void;
   unassignedOnly: boolean;
   onUnassignedOnlyChange: (only: boolean) => void;
   onClear: () => void;
@@ -41,6 +44,8 @@ export function CoordinationFilters({
   onQueryChange,
   companies,
   onCompaniesChange,
+  responsibles,
+  onResponsiblesChange,
   unassignedOnly,
   onUnassignedOnlyChange,
   onClear,
@@ -55,6 +60,11 @@ export function CoordinationFilters({
       />
 
       <CompanyFilter value={companies} onChange={onCompaniesChange} />
+
+      <ResponsibleFilter
+        value={responsibles}
+        onChange={onResponsiblesChange}
+      />
 
       <div className={styles.toggle}>
         <Switch

@@ -56,6 +56,8 @@ export function ResponsiblesPanel() {
     setQuery,
     companies,
     setCompanies,
+    responsibles,
+    setResponsibles,
     unassignedOnly,
     setUnassignedOnly,
     clear,
@@ -74,9 +76,17 @@ export function ResponsiblesPanel() {
       if (companies.length > 0 && !companies.includes(operation.companyId)) {
         return false;
       }
+      // Any of the chosen people, not all: the question is «what do these
+      // three carry between them», never «what do the three share».
+      if (
+        responsibles.length > 0 &&
+        !assigned.some((id) => responsibles.includes(id))
+      ) {
+        return false;
+      }
       return !term || operation.name.toLowerCase().includes(term);
     });
-  }, [rows, query, companies, unassignedOnly]);
+  }, [rows, query, companies, responsibles, unassignedOnly]);
 
   const missing = rows.filter((r) => r.assigned.length === 0).length;
 
@@ -87,6 +97,8 @@ export function ResponsiblesPanel() {
         onQueryChange={setQuery}
         companies={companies}
         onCompaniesChange={setCompanies}
+        responsibles={responsibles}
+        onResponsiblesChange={setResponsibles}
         unassignedOnly={unassignedOnly}
         onUnassignedOnlyChange={setUnassignedOnly}
         onClear={clear}
@@ -108,7 +120,7 @@ export function ResponsiblesPanel() {
               <div className={styles.empty}>
                 <NoDataMessage
                   title="Ninguna operación coincide"
-                  message="Prueba con otro nombre, otra compañía o apaga el filtro de sin responsable."
+                  message="Prueba con otro nombre, otra compañía, otro responsable, o apaga el filtro de sin responsable."
                 />
               </div>
             ) : (

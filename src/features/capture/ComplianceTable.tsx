@@ -48,13 +48,14 @@ const styles = {
   name: "flex items-center gap-1.5 truncate text-sm font-medium leading-tight",
   gap: "h-3.5 w-3.5 shrink-0 text-destructive-warm",
   context: "truncate text-xs text-muted-foreground",
-  strip: "shrink-0",
+  strip: "flex min-w-0 flex-1",
   balance: "w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground",
   ruler: "flex items-center gap-4 border-b bg-muted/70 px-4 py-2",
   rulerGap: "w-56 shrink-0",
-  rulerAxis: "flex shrink-0 gap-[2px]",
+  rulerAxis: "flex min-w-0 flex-1 gap-[2px]",
+  // Matches the cells exactly, so a tick lands over the week it names.
   rulerTick:
-    "w-[9px] shrink-0 text-center text-[0.5625rem] tabular-nums text-muted-foreground",
+    "min-w-[6px] flex-1 text-center text-[0.5625rem] tabular-nums text-muted-foreground",
   legend: "px-4 py-3",
   empty: "py-10",
 };
@@ -70,6 +71,8 @@ export function ComplianceTable() {
     setQuery,
     companies,
     setCompanies,
+    responsibles,
+    setResponsibles,
     unassignedOnly,
     setUnassignedOnly,
     clear,
@@ -86,6 +89,7 @@ export function ComplianceTable() {
       operation,
       cells,
       history,
+      assigned: responsiblesOf(state, operation.id),
       unassigned: responsiblesOf(state, operation.id).length === 0,
       ratio: history.required === 0 ? 1 : history.complete / history.required,
     };
@@ -101,9 +105,17 @@ export function ComplianceTable() {
       ) {
         return false;
       }
+      // Any of the chosen people, not all: the question is «what do these
+      // three carry between them», never «what do the three share».
+      if (
+        responsibles.length > 0 &&
+        !row.assigned.some((id) => responsibles.includes(id))
+      ) {
+        return false;
+      }
       return !term || row.operation.name.toLowerCase().includes(term);
     });
-  }, [rows, query, companies, unassignedOnly]);
+  }, [rows, query, companies, responsibles, unassignedOnly]);
 
   const summary = weekSummary(state, period, now);
   const reported = OPERATIONS.filter(
@@ -118,6 +130,8 @@ export function ComplianceTable() {
           onQueryChange={setQuery}
           companies={companies}
           onCompaniesChange={setCompanies}
+          responsibles={responsibles}
+          onResponsiblesChange={setResponsibles}
           unassignedOnly={unassignedOnly}
           onUnassignedOnlyChange={setUnassignedOnly}
           onClear={clear}
@@ -139,7 +153,7 @@ export function ComplianceTable() {
           <div className={styles.empty}>
             <NoDataMessage
               title="Ninguna operación coincide"
-              message="Prueba con otro nombre, otra compañía o apaga el filtro de sin responsable."
+              message="Prueba con otro nombre, otra compañía, otro responsable, o apaga el filtro de sin responsable."
             />
           </div>
         ) : (

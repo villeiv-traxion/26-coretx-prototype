@@ -129,12 +129,15 @@ export function useOperationFilters(): OperationFilterState {
 }
 
 const UNASSIGNED = "un";
+const RESPONSIBLE = "re";
 
 export interface CoordinationFilterState {
   query: string;
   setQuery: (query: string) => void;
   companies: string[];
   setCompanies: (companies: string[]) => void;
+  responsibles: string[];
+  setResponsibles: (responsibles: string[]) => void;
   unassignedOnly: boolean;
   setUnassignedOnly: (only: boolean) => void;
   clear: () => void;
@@ -154,6 +157,10 @@ export function useCoordinationFilters(): CoordinationFilterState {
 
   const urlQuery = params.get(QUERY) ?? "";
   const companies = useMemo(() => parseList(params.get(COMPANIES)), [params]);
+  const responsibles = useMemo(
+    () => parseList(params.get(RESPONSIBLE)),
+    [params],
+  );
   const unassignedOnly = params.get(UNASSIGNED) === "1";
 
   const [draft, setDraft] = useState(urlQuery);
@@ -197,6 +204,11 @@ export function useCoordinationFilters(): CoordinationFilterState {
       (value: string[]) => write([[COMPANIES, value.join(",")]]),
       [write],
     ),
+    responsibles,
+    setResponsibles: useCallback(
+      (value: string[]) => write([[RESPONSIBLE, value.join(",")]]),
+      [write],
+    ),
     unassignedOnly,
     setUnassignedOnly: useCallback(
       (only: boolean) => write([[UNASSIGNED, only ? "1" : ""]]),
@@ -209,11 +221,15 @@ export function useCoordinationFilters(): CoordinationFilterState {
       write([
         [QUERY, ""],
         [COMPANIES, ""],
+        [RESPONSIBLE, ""],
         [UNASSIGNED, ""],
       ]);
     }, [write]),
     active:
-      draft.trim() !== "" || companies.length > 0 || unassignedOnly,
+      draft.trim() !== "" ||
+      companies.length > 0 ||
+      responsibles.length > 0 ||
+      unassignedOnly,
   };
 }
 
