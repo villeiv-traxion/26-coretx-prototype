@@ -52,6 +52,9 @@ interface OperationFiltersProps {
   onCompaniesChange: (companies: string[]) => void;
   states: Completeness[];
   onStatesChange: (states: Completeness[]) => void;
+  onClear: () => void;
+  /** Whether anything is narrowing the rail right now. */
+  active: boolean;
 }
 
 export function OperationFilters({
@@ -61,10 +64,9 @@ export function OperationFilters({
   onCompaniesChange,
   states,
   onStatesChange,
+  onClear,
+  active,
 }: OperationFiltersProps) {
-  const active =
-    query.trim() !== "" || companies.length > 0 || states.length > 0;
-
   return (
     <div className={styles.root}>
       <div className={styles.searchWrapper}>
@@ -99,14 +101,7 @@ export function OperationFilters({
       </div>
 
       {active ? (
-        <Button
-          variant="outline"
-          onClick={() => {
-            onQueryChange("");
-            onCompaniesChange([]);
-            onStatesChange([]);
-          }}
-        >
+        <Button variant="outline" onClick={onClear}>
           <X className={styles.clearIcon} />
           Limpiar
         </Button>

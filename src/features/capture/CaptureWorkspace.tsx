@@ -1,16 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { MousePointerClick } from "lucide-react";
 import { Card } from "@traxion-global/design-system/react";
 import { useStore } from "./lib/store";
 import { useNow } from "./lib/now";
-import {
-  completenessOf,
-  operationsOf,
-  progressOf,
-  type Completeness,
-} from "./lib/compliance";
+import { completenessOf, operationsOf, progressOf } from "./lib/compliance";
+import { useOperationFilters } from "./lib/filters";
 import { periodOf } from "./lib/periods";
 import { getUser } from "./lib/organization";
 import { WeekHeader } from "./WeekHeader";
@@ -79,9 +75,16 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
     (r) => r.progress.delivered === r.progress.total,
   ).length;
 
-  const [query, setQuery] = useState("");
-  const [companies, setCompanies] = useState<string[]>([]);
-  const [states, setStates] = useState<Completeness[]>([]);
+  const {
+    query,
+    setQuery,
+    companies,
+    setCompanies,
+    states,
+    setStates,
+    clear,
+    active: filtering,
+  } = useOperationFilters();
 
   // An empty selection means "no restriction", not "nothing matches": that is
   // what the combobox trigger says when it shows its placeholder.
@@ -97,9 +100,6 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
       return !term || operation.name.toLowerCase().includes(term);
     });
   }, [rows, query, companies, states]);
-
-  const filtering =
-    query.trim() !== "" || companies.length > 0 || states.length > 0;
 
   return (
     <div className={styles.page}>
@@ -119,6 +119,8 @@ export function CaptureWorkspace({ selectedId }: { selectedId?: string }) {
         onCompaniesChange={setCompanies}
         states={states}
         onStatesChange={setStates}
+        onClear={clear}
+        active={filtering}
       />
 
       <Card className={styles.surface}>

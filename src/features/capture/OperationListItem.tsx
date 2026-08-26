@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Progress } from "@traxion-global/design-system/react";
 import { getCompany, type Operation } from "./lib/organization";
 import { completenessOf, type WeekProgress } from "./lib/compliance";
+import { useFilterSearch } from "./lib/filters";
 import { CompletenessBadge } from "./CompletenessBadge";
 
 /**
@@ -57,10 +58,13 @@ export function OperationListItem({
   selected,
 }: OperationListItemProps) {
   const company = getCompany(operation.companyId);
+  // Carries the filters across the jump: without them the rail would come back
+  // unfiltered the moment you opened one of its own rows.
+  const search = useFilterSearch();
 
   return (
     <Link
-      href={`/intelligence/capture/operation/${operation.id}`}
+      href={`/intelligence/capture/operation/${operation.id}${search}`}
       aria-current={selected ? "page" : undefined}
       className={selected ? styles.itemSelected : styles.item}
     >
