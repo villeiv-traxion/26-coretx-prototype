@@ -5,7 +5,10 @@ import { Lock } from "lucide-react";
 import {
   Button,
   Card,
+  Label,
+  NoDataMessage,
   Progress,
+  Switch,
   toast,
 } from "@traxion-global/design-system/react";
 import { INDICATORS } from "./lib/catalog";
@@ -43,12 +46,17 @@ const styles = {
     "flex items-start gap-3 border-l-4 border-secondary bg-muted/60 px-4 py-3 text-sm shadow-none",
   noticeIcon: "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground",
   noticeText: "leading-snug",
+  // Badge and switch stack on the right so the head stays two rows tall, in
+  // step with the title and its line of context on the left.
+  side: "flex shrink-0 flex-col items-end gap-2",
+  toggle: "flex items-center gap-2",
+  toggleLabel: "cursor-pointer text-xs text-muted-foreground",
   blocks: "flex flex-col gap-3",
-  footer:
-    "sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background/95 px-4 py-3 backdrop-blur",
+  empty: "py-10",
+  footer: "flex flex-wrap items-center justify-between gap-6 pt-1",
   gauge: "flex min-w-[12rem] flex-1 items-center gap-3",
-  bar: "h-2 max-w-xs flex-1",
-  fraction: "text-sm tabular-nums",
+  bar: "h-2 flex-1",
+  fraction: "shrink-0 text-sm tabular-nums",
 };
 
 export function CaptureForm({ operationId }: { operationId: string }) {
@@ -65,6 +73,13 @@ export function CaptureForm({ operationId }: { operationId: string }) {
 
   const [draft, setDraft] = useState<Values>(stored);
   const values = closed ? stored : draft;
+
+  // Re-derived on every keystroke: an indicator drops off the list the moment
+  // its last field lands. It does mean the rows below shift up while you type.
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const shown = pendingOnly
+    ? INDICATORS.filter((i) => !isComplete(i, values))
+    : INDICATORS;
 
   const delivered = INDICATORS.filter((i) => isComplete(i, values)).length;
   const failures = INDICATORS.flatMap((i) => check(i, values));
@@ -106,9 +121,21 @@ export function CaptureForm({ operationId }: { operationId: string }) {
             {company?.name} · Semana {period.week} · {rangeInWords(period)}
           </p>
         </div>
-        <CompletenessBadge
-          state={completenessOf({ delivered, total: INDICATORS.length })}
-        />
+        <div className={styles.side}>
+          <CompletenessBadge
+            state={completenessOf({ delivered, total: INDICATORS.length })}
+          />
+          <div className={styles.toggle}>
+            <Switch
+              id="pending-only"
+              checked={pendingOnly}
+              onCheckedChange={setPendingOnly}
+            />
+            <Label htmlFor="pending-only" className={styles.toggleLabel}>
+              Mostrar solo indicadores sin llenar
+            </Label>
+          </div>
+        </div>
       </div>
 
       {closed ? (
@@ -121,17 +148,26 @@ export function CaptureForm({ operationId }: { operationId: string }) {
         </Card>
       ) : null}
 
-      <div className={styles.blocks}>
-        {INDICATORS.map((indicator) => (
-          <IndicatorBlock
-            key={indicator.id}
-            indicator={indicator}
-            values={values}
-            readOnly={closed}
-            onChange={onFieldChange}
+      {shown.length === 0 ? (
+        <div className={styles.empty}>
+          <NoDataMessage
+            title="No falta ninguno"
+            message="Los once indicadores de esta semana ya están capturados. Apaga el interruptor para volver a verlos."
           />
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className={styles.blocks}>
+          {shown.map((indicator) => (
+            <IndicatorBlock
+              key={indicator.id}
+              indicator={indicator}
+              values={values}
+              readOnly={closed}
+              onChange={onFieldChange}
+            />
+          ))}
+        </div>
+      )}
 
       <div className={styles.footer}>
         <div className={styles.gauge}>
