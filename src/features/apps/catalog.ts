@@ -84,7 +84,10 @@ export const APPS: CoretxApp[] = [
     hasAccess: true,
     entries: [
       { id: "capture", href: "/intelligence/capture" },
-      { id: "insights" },
+      {
+        id: "insights",
+        href: "https://one-intelligence-dashboard-bdd4f6c7c0dwedft.a01.azurefd.net/?bud=division",
+      },
     ],
   },
   {

@@ -21,6 +21,9 @@ const styles = {
   disabledWrapper: "inline-block w-full sm:w-auto",
 };
 
+/** Los destinos fuera del prototipo se abren en una pestaña nueva. */
+const isExternal = (href: string) => href.startsWith("http");
+
 interface AppCardActionsProps {
   app: CoretxApp;
 }
@@ -83,7 +86,14 @@ export function AppCardActions({ app }: AppCardActionsProps) {
           className={styles.linkButton}
         >
           {action.href ? (
-            <Link href={action.href}>{action.label}</Link>
+            <Link
+              href={action.href}
+              {...(isExternal(action.href)
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+            >
+              {action.label}
+            </Link>
           ) : (
             action.label
           )}

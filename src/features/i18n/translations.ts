@@ -27,19 +27,19 @@ export const translations = {
     },
     apps: {
       logistics: {
-        name: "CoreTX Logistics",
+        name: "Logistics",
         description: "Gestión Integral de Operaciones Logísticas.",
       },
       one: {
-        name: "CoreTX One",
+        name: "One",
         description: "Brokerage Cross-Border, Intra-MX e Intra-USA.",
       },
       fleet: {
-        name: "CoreTX Fleet",
+        name: "Fleet",
         description: "Gestión integral de la División Carga.",
       },
       mind: {
-        name: "CoreTX MIND",
+        name: "MIND",
         description: "Gestión integral de la División Personas.",
       },
       intelligence: {
@@ -101,19 +101,19 @@ export const translations = {
     },
     apps: {
       logistics: {
-        name: "CoreTX Logistics",
+        name: "Logistics",
         description: "End-to-end management of logistics operations.",
       },
       one: {
-        name: "CoreTX One",
+        name: "One",
         description: "Cross-Border, Intra-MX and Intra-USA brokerage.",
       },
       fleet: {
-        name: "CoreTX Fleet",
+        name: "Fleet",
         description: "End-to-end management of the Cargo division.",
       },
       mind: {
-        name: "CoreTX MIND",
+        name: "MIND",
         description: "End-to-end management of the People division.",
       },
       intelligence: {
