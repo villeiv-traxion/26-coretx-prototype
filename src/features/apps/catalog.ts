@@ -11,6 +11,15 @@ export type AppId =
   | "navigate"
   | "connect";
 
+/** Entradas (módulos) de una app. Los ids son la clave de `t.appEntries`. */
+export type AppEntryId = "capture" | "insights";
+
+export type AppEntry = {
+  id: AppEntryId;
+  /** Sin `href` el botón es un marcador: ese módulo no existe todavía. */
+  href?: string;
+};
+
 export type CoretxApp = {
   id: AppId;
   category: CategoryId;
@@ -26,6 +35,11 @@ export type CoretxApp = {
    * del prototipo; el resto siguen siendo cards sin navegación.
    */
   href?: string;
+  /**
+   * Apps que se entran por módulo en lugar de por un único «Abrir»: la card
+   * muestra un botón por entrada y `href` deja de usarse.
+   */
+  entries?: AppEntry[];
 };
 
 /**
@@ -68,7 +82,10 @@ export const APPS: CoretxApp[] = [
     category: "transversal",
     illustration: "/apps/intelligence.svg",
     hasAccess: true,
-    href: "/intelligence/capture",
+    entries: [
+      { id: "capture", href: "/intelligence/capture" },
+      { id: "insights" },
+    ],
   },
   {
     id: "navigate",

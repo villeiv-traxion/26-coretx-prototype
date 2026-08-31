@@ -43,17 +43,21 @@ export const translations = {
         description: "Gestión integral de la División Personas.",
       },
       intelligence: {
-        name: "CoreTX Intelligence",
+        name: "Intelligence",
         description: "Sistemas de Gestión, Datos y Decisión.",
       },
       navigate: {
-        name: "CoreTX Navigate",
+        name: "Navigate",
         description: "Ejecución Comercial Corporativa.",
       },
       connect: {
-        name: "CoreTX Connect",
+        name: "Connect",
         description: "Digitalización de Servicios Corporativos.",
       },
+    },
+    appEntries: {
+      capture: "Captura",
+      insights: "Insights",
     },
     footer: {
       copyright: "© {year} Traxion. Todos los derechos reservados.",
@@ -113,17 +117,21 @@ export const translations = {
         description: "End-to-end management of the People division.",
       },
       intelligence: {
-        name: "CoreTX Intelligence",
+        name: "Intelligence",
         description: "Management systems, data and decision-making.",
       },
       navigate: {
-        name: "CoreTX Navigate",
+        name: "Navigate",
         description: "Corporate commercial execution.",
       },
       connect: {
-        name: "CoreTX Connect",
+        name: "Connect",
         description: "Digitalisation of corporate services.",
       },
+    },
+    appEntries: {
+      capture: "Capture",
+      insights: "Insights",
     },
     footer: {
       copyright: "© {year} Traxion. All rights reserved.",

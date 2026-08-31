@@ -1,17 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "@traxion-global/design-system/react";
 import { useLanguage } from "@/features/i18n";
+import { AppCardActions } from "./AppCardActions";
 import type { CoretxApp } from "./catalog";
 
 const styles = {
@@ -32,12 +28,6 @@ const styles = {
   description:
     "text-xs text-muted-foreground leading-tight mb-2 sm:mb-3 group-[.bg-dark]:text-white/70",
   linksSection: "p-0 col-span-2 sm:col-span-1 sm:col-start-2",
-  // `size="sm"` es el más pequeño que trae el DS. Sólo se le fuerza el ancho:
-  // en móvil ocupa la card entera, y desde `sm` se ajusta a su texto.
-  linkButton: "w-full sm:w-auto",
-  // Un botón deshabilitado no emite eventos de puntero, así que el tooltip
-  // necesita colgar de un envoltorio y no del propio botón.
-  disabledWrapper: "inline-block w-full",
 };
 
 interface AppCardProps {
@@ -47,7 +37,6 @@ interface AppCardProps {
 export function AppCard({ app }: AppCardProps) {
   const { t } = useLanguage();
   const { name, description } = t.apps[app.id];
-  const openLabel = t.common.openApp.replace("{app}", name);
 
   return (
     <Card className={styles.card}>
@@ -62,33 +51,7 @@ export function AppCard({ app }: AppCardProps) {
       </CardContent>
 
       <CardContent className={styles.linksSection}>
-        {app.hasAccess ? (
-          // Sin `href` la card sigue siendo un marcador: la app no existe todavía.
-          <Button
-            asChild={Boolean(app.href)}
-            variant="outline"
-            size="sm"
-            className={styles.linkButton}
-          >
-            {app.href ? <Link href={app.href}>{openLabel}</Link> : openLabel}
-          </Button>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className={styles.disabledWrapper} tabIndex={0}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className={styles.linkButton}
-                >
-                  {openLabel}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t.common.noAccess}</TooltipContent>
-          </Tooltip>
-        )}
+        <AppCardActions app={app} />
       </CardContent>
     </Card>
   );
